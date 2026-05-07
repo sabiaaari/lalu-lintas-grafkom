@@ -30,9 +30,9 @@ class SxvxnEngine:
         self.clock = pg.time.Clock()
         self.time = 0.0
         self.delta_time = 0.0
-        self.background_color = (0.10, 0.12, 0.16)
+        self.background_color = (0.55, 0.78, 0.95) # Warna langit cerah
 
-        self.light = PointLight(position=(6.0, 8.0, 6.0), color=(1.0, 1.0, 1.0), intensity=1.2)
+        self.light = PointLight(position=(-8.0, 12.0, 10.0), color=(1.0, 0.96, 0.86), intensity=1.35)
         self.camera = Camera(self)
         self.mesh = Mesh(self)
         self.scene = Scene(self)

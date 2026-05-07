@@ -91,30 +91,82 @@ class Scene:
         app = self.app
         add = self.add_object
 
-        # 0. ALAS UTAMA
-        add(ColorCube(app, pos=(0, -0.25, 0), scale=(50, 0.1, 50), color=(0.4, 0.5, 0.4)))
+        # 0. ALAS UTAMA - SUASANA PEDESAAN
+        # Tanah dasar hijau tua sebagai hamparan rumput/pedesaan
+        add(ColorCube(app, pos=(0, -0.35, 0), scale=(55, 0.12, 55), color=(0.28, 0.50, 0.22)))
 
-        # 1. LINGKUNGAN (X-axis Road, Z-axis Rails)
-        # Aspal Jalan Raya (Sumbu X)
-        add(ColorCube(app, pos=(0, -0.1, 0), scale=(50, 0.05, 5), color=(0.15, 0.15, 0.15)))
-        
-        # Marka Jalan Putus-Putus (Sumbu X)
+        # Petak sawah kiri dan kanan jalan
+        # Dibuat dari beberapa bidang hijau-kuning agar tidak terlihat polos
+        rice_fields = [
+            # sisi utara / belakang jalan
+            ((-27, -0.18, -27), (18, 0.03, 10), (0.42, 0.62, 0.20)),
+            ((27, -0.18, -27), (18, 0.03, 10), (0.50, 0.68, 0.22)),
+            ((-27, -0.18, -14), (18, 0.03, 5), (0.36, 0.58, 0.18)),
+            ((27, -0.18, -14), (18, 0.03, 5), (0.46, 0.64, 0.20)),
+
+            # sisi selatan / depan jalan
+            ((-27, -0.18, 27), (18, 0.03, 10), (0.46, 0.64, 0.20)),
+            ((27, -0.18, 27), (18, 0.03, 10), (0.42, 0.62, 0.20)),
+            ((-27, -0.18, 14), (18, 0.03, 5), (0.50, 0.68, 0.22)),
+            ((27, -0.18, 14), (18, 0.03, 5), (0.36, 0.58, 0.18)),
+        ]
+
+        for pos, scale, color in rice_fields:
+            add(ColorCube(app, pos=pos, scale=scale, color=color))
+
+        # Pematang sawah horizontal
+        for z_pos in [-36, -27, -18, 18, 27, 36]:
+            add(ColorCube(app, pos=(-27, -0.12, z_pos), scale=(18, 0.03, 0.12), color=(0.34, 0.25, 0.12)))
+            add(ColorCube(app, pos=(27, -0.12, z_pos), scale=(18, 0.03, 0.12), color=(0.34, 0.25, 0.12)))
+
+        # Pematang sawah vertikal
+        for x_pos in [-42, -27, -12, 12, 27, 42]:
+            add(ColorCube(app, pos=(x_pos, -0.11, -27), scale=(0.12, 0.03, 9), color=(0.34, 0.25, 0.12)))
+            add(ColorCube(app, pos=(x_pos, -0.11, 27), scale=(0.12, 0.03, 9), color=(0.34, 0.25, 0.12)))
+
+        # 1. LINGKUNGAN UTAMA
+        # Aspal jalan raya tetap di sumbu X
+        add(ColorCube(app, pos=(0, -0.09, 0), scale=(50, 0.05, 5), color=(0.13, 0.13, 0.13)))
+
+        # Marka Jalan Putus-Putus
         for x_pos in range(-48, 52, 4):
-            add(ColorCube(app, pos=(x_pos, -0.04, 0), scale=(0.5, 0.01, 0.1), color=(1.0, 1.0, 1.0)))
+            add(ColorCube(app, pos=(x_pos, -0.035, 0), scale=(0.5, 0.01, 0.1), color=(1.0, 1.0, 1.0)))
 
-        # Rel Kereta (Sumbu Z)
-        add(ColorCube(app, pos=(-1.5, 0.15, 0), scale=(0.1, 0.1, 50), color=(0.5, 0.5, 0.5)))
-        add(ColorCube(app, pos=(1.5, 0.15, 0), scale=(0.1, 0.1, 50), color=(0.5, 0.5, 0.5)))
-        
-        # Bantalan Rel (Sumbu Z)
+        # Area ballast/batu kerikil rel
+        add(ColorCube(app, pos=(0, -0.02, 0), scale=(2.8, 0.06, 50), color=(0.36, 0.36, 0.34)))
+
+        # Rel Kereta di sumbu Z
+        add(ColorCube(app, pos=(-1.5, 0.15, 0), scale=(0.1, 0.1, 50), color=(0.50, 0.50, 0.50)))
+        add(ColorCube(app, pos=(1.5, 0.15, 0), scale=(0.1, 0.1, 50), color=(0.50, 0.50, 0.50)))
+
+        # Bantalan Rel
         for i in range(34):
             z_pos = (i - 17) * 1.5
-            add(ColorCube(app, pos=(0, 0.05, z_pos), scale=(2, 0.05, 0.3), color=(0.3, 0.2, 0.1)))
-        
-        # Pos Penjaga
-        add(ColorCube(app, pos=(6, 0.85, 6), scale=(1, 1, 1), color=(0.8, 0.8, 0.7)))
-        add(ColorCube(app, pos=(6, 1.45, 6), scale=(1.2, 0.1, 1.2), color=(0.6, 0.1, 0.1)))
+            add(ColorCube(app, pos=(0, 0.05, z_pos), scale=(2, 0.05, 0.3), color=(0.30, 0.20, 0.10)))
 
+        # Pos Penjaga gaya sederhana pedesaan
+        add(ColorCube(app, pos=(6, 0.85, 6), scale=(1, 1, 1), color=(0.82, 0.76, 0.60)))
+        add(ColorCube(app, pos=(6, 1.45, 6), scale=(1.25, 0.12, 1.25), color=(0.62, 0.18, 0.08)))
+        add(ColorCube(app, pos=(5.15, 0.85, 6), scale=(0.05, 0.35, 0.35), color=(0.18, 0.28, 0.36)))
+        add(ColorCube(app, pos=(6.85, 0.85, 6), scale=(0.05, 0.35, 0.35), color=(0.18, 0.28, 0.36)))
+
+        # Elemen langit low-poly: matahari dan awan
+        # Catatan: langit utama tetap berasal dari background_color di main.py
+        add(ColorCube(app, pos=(-18, 12, -35), scale=(1.6, 1.6, 0.08), color=(1.0, 0.88, 0.20)))
+
+        cloud_data = [
+            ((-8, 10, -34), (2.2, 0.35, 0.35)),
+            ((-5.8, 10.2, -34), (1.4, 0.45, 0.35)),
+            ((-3.8, 9.9, -34), (2.0, 0.30, 0.35)),
+
+            ((18, 11, -38), (2.5, 0.35, 0.35)),
+            ((20.5, 11.2, -38), (1.5, 0.45, 0.35)),
+            ((22.2, 10.9, -38), (2.0, 0.30, 0.35)),
+        ]
+
+        for pos, scale in cloud_data:
+            add(ColorCube(app, pos=pos, scale=scale, color=(0.95, 0.97, 0.98)))
+            
         # 2. KERETA API (Expanded Locomotive + 2 Carriages with Wheels)
         self.train_parts = []
         self.train_wheels = []
