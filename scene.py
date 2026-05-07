@@ -139,10 +139,22 @@ class Scene:
         add(ColorCube(app, pos=(-1.5, 0.15, 0), scale=(0.1, 0.1, 50), color=(0.50, 0.50, 0.50)))
         add(ColorCube(app, pos=(1.5, 0.15, 0), scale=(0.1, 0.1, 50), color=(0.50, 0.50, 0.50)))
 
-        # Bantalan Rel
-        for i in range(34):
-            z_pos = (i - 17) * 1.5
-            add(ColorCube(app, pos=(0, 0.05, z_pos), scale=(2, 0.05, 0.3), color=(0.30, 0.20, 0.10)))
+        # Bantalan Rel - full dari ujung ke ujung rel
+        # Rel memiliki scale Z = 50, artinya panjang visualnya membentang sekitar Z -50 sampai Z 50.
+        # Spasi 1.5 dipakai agar bantalan terlihat rapat dan konsisten.
+        RAIL_HALF_LENGTH = 50
+        SLEEPER_SPACING = 1.5
+
+        sleeper_count = int((RAIL_HALF_LENGTH * 2) / SLEEPER_SPACING) + 1
+
+        for i in range(sleeper_count):
+            z_pos = -RAIL_HALF_LENGTH + (i * SLEEPER_SPACING)
+            add(ColorCube(
+                app,
+                pos=(0, 0.05, z_pos),
+                scale=(2.1, 0.05, 0.30),
+                color=(0.30, 0.20, 0.10)
+            ))
 
         # Pos Penjaga gaya sederhana pedesaan
         add(ColorCube(app, pos=(6, 0.85, 6), scale=(1, 1, 1), color=(0.82, 0.76, 0.60)))
