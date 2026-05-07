@@ -8,6 +8,7 @@ from mesh import Mesh
 from scene import Scene
 from scene_renderer import SceneRenderer
 
+
 class SxvxnEngine:
     def __init__(self, win_size=(1280, 720)):
         pg.init()
@@ -29,17 +30,9 @@ class SxvxnEngine:
         self.clock = pg.time.Clock()
         self.time = 0.0
         self.delta_time = 0.0
-        
-        # ==========================================
-        # SETUP WARNA LANGIT (SIANG & MALAM)
-        # ==========================================
-        self.is_night = False
-        self.day_bg = (0.4, 0.65, 0.9)   # Biru langit cerah (Siang)
-        self.night_bg = (0.05, 0.05, 0.1) # Hitam kebiruan (Malam)
-        self.background_color = self.day_bg
+        self.background_color = (0.10, 0.12, 0.16)
 
-        # Posisi lampu ditinggikan sedikit (Y=15) agar cahayanya rata seperti matahari
-        self.light = PointLight(position=(6.0, 15.0, 6.0), color=(1.0, 1.0, 1.0), intensity=1.2)
+        self.light = PointLight(position=(6.0, 8.0, 6.0), color=(1.0, 1.0, 1.0), intensity=1.2)
         self.camera = Camera(self)
         self.mesh = Mesh(self)
         self.scene = Scene(self)
@@ -60,21 +53,6 @@ class SxvxnEngine:
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 self.scene.handle_input_space()
 
-            # ==========================================
-            # EVENT LISTENER: Tombol "N" untuk Ganti Waktu
-            # ==========================================
-            if event.type == pg.KEYDOWN and event.key == pg.K_n:
-                self.is_night = not self.is_night
-                if self.is_night:
-                    self.background_color = self.night_bg
-                    # Malam: Cahaya redup (0.3) dengan nuansa cahaya bulan (biru pucat)
-                    self.light.update_light(intensity=0.3, color=(0.5, 0.6, 0.9)) 
-                else:
-                    self.background_color = self.day_bg
-                    # Siang: Cahaya terang (1.2) dengan nuansa matahari (putih murni)
-                    self.light.update_light(intensity=1.2, color=(1.0, 1.0, 1.0))
-
-            # Kontrol Kamera
             if event.type == pg.KEYDOWN and event.key == pg.K_TAB:
                 self.camera.use_orbit = not self.camera.use_orbit
                 self.camera.set_default()
@@ -90,6 +68,7 @@ class SxvxnEngine:
                 elif event.button == 5:
                     self.camera.orbit_radius = min(40.0, self.camera.orbit_radius + 0.5)
 
+
     def render(self):
         self.ctx.clear(color=self.background_color)
         self.scene_renderer.render()
@@ -104,12 +83,14 @@ class SxvxnEngine:
 
     def run(self):
         while True:
+            # Hitung delta_time dalam detik di awal frame
             self.delta_time = self.clock.tick(60) * 0.001
             self.get_time()
             self.check_events()
             self.camera.update()
-            self.scene.update() 
+            self.scene.update() # Update logika perlintasan & aktor
             self.render()
+
 
 if __name__ == '__main__':
     app = SxvxnEngine()
