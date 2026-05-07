@@ -167,34 +167,229 @@ class Scene:
         for pos, scale in cloud_data:
             add(ColorCube(app, pos=pos, scale=scale, color=(0.95, 0.97, 0.98)))
             
-        # 2. KERETA API (Expanded Locomotive + 2 Carriages with Wheels)
+                # 2. KERETA API - MODEL TERINSPIRASI KAI PADA FOTO
+        # Konsep visual:
+        # - Lokomotif putih dengan bawah depan merah
+        # - Strip oranye dan biru di sisi badan
+        # - Gerbong putih panjang dengan jendela hitam
+        # - Atap abu-abu dan roda/bogie hitam
+        #
+        # Catatan:
+        # Karena project belum memakai texture/text renderer, logo KAI asli tidak ditempel.
+        # Visual dibuat dengan komposisi ColorCube agar tetap ringan dan sesuai grafika komputer dasar.
+
         self.train_parts = []
         self.train_wheels = []
-        train_colors = [(0.2, 0.2, 0.6), (0.7, 0.7, 0.7), (0.7, 0.7, 0.7)]
-        
-        for i in range(3):
-            z_offset = i * 8.0
-            color = train_colors[i]
-            
-            # Body Gerbong
-            t_body = ColorCube(app, pos=(0, 1.75, self.train_z - z_offset), scale=(1.8, 1.5, 3.5), color=color)
-            t_accent = ColorCube(app, pos=(0, 0.6, self.train_z - z_offset), scale=(1.85, 0.2, 3.55), color=(0.1, 0.1, 0.1))
-            self.train_parts.extend([t_body, t_accent])
-            add(t_body); add(t_accent)
-            
-            # Wheels for Gerbong (4 per carriage)
-            w_offsets = [glm.vec3(0.8, -0.4, 1.5), glm.vec3(-0.8, -0.4, 1.5), glm.vec3(0.8, -0.4, -1.5), glm.vec3(-0.8, -0.4, -1.5)]
-            for off in w_offsets:
-                w_pos = glm.vec3(0, 1.75, self.train_z - z_offset) + off # Placeholder pos
-                wheel = ColorCube(app, pos=w_pos, scale=(0.3, 0.3, 0.3), color=(0.05, 0.05, 0.05))
-                wheel.relative_offset = off + glm.vec3(0, -1.75 + 0.5, 0) # Offset from body center
-                self.train_wheels.append((wheel, z_offset))
-                add(wheel)
 
-            if i == 0:
-                t_cabin = ColorCube(app, pos=(0, 2.7, self.train_z - z_offset + 1.0), scale=(1.4, 0.5, 1.2), color=(0.15, 0.15, 0.3))
-                self.train_parts.append(t_cabin)
-                add(t_cabin)
+        def add_train_part(local_offset, scale, color, rot=(0, 0, 0)):
+            """
+            Membuat bagian kereta relatif terhadap titik anchor kereta.
+            Anchor kereta: glm.vec3(0, 1.75, self.train_z)
+            """
+            train_anchor = glm.vec3(0, 1.75, self.train_z)
+            obj = ColorCube(
+                app,
+                pos=train_anchor + glm.vec3(local_offset),
+                rot=rot,
+                scale=scale,
+                color=color
+            )
+            obj.relative_offset = glm.vec3(local_offset)
+            self.train_parts.append(obj)
+            add(obj)
+            return obj
+
+        def add_train_wheel(local_offset):
+            """
+            Roda/bogie kereta dibuat terpisah agar bisa diputar saat kereta bergerak.
+            """
+            train_anchor = glm.vec3(0, 1.75, self.train_z)
+            wheel = ColorCube(
+                app,
+                pos=train_anchor + glm.vec3(local_offset),
+                scale=(0.28, 0.28, 0.28),
+                color=(0.04, 0.04, 0.04)
+            )
+            wheel.relative_offset = glm.vec3(local_offset)
+            self.train_wheels.append((wheel, 0.0))
+            add(wheel)
+            return wheel
+
+        # =========================
+        # A. LOKOMOTIF
+        # =========================
+        # Arah depan kereta berada di sisi +Z
+        loco_center_z = 2.2
+
+        # Body utama lokomotif putih
+        add_train_part(
+            local_offset=(0.0, -0.05, loco_center_z),
+            scale=(1.55, 1.05, 2.70),
+            color=(0.92, 0.92, 0.88)
+        )
+
+        # Atap lokomotif abu-abu
+        add_train_part(
+            local_offset=(0.0, 1.05, loco_center_z),
+            scale=(1.35, 0.18, 2.35),
+            color=(0.72, 0.72, 0.70)
+        )
+
+        # Bagian bawah lokomotif merah seperti foto
+        add_train_part(
+            local_offset=(0.0, -1.00, loco_center_z + 1.65),
+            scale=(1.52, 0.22, 0.75),
+            color=(0.72, 0.05, 0.03)
+        )
+
+        # Muka depan lokomotif putih
+        add_train_part(
+            local_offset=(0.0, 0.10, loco_center_z + 2.72),
+            scale=(1.50, 0.90, 0.08),
+            color=(0.95, 0.95, 0.92)
+        )
+
+        # Kaca depan lokomotif
+        add_train_part(
+            local_offset=(-0.45, 0.48, loco_center_z + 2.82),
+            scale=(0.36, 0.30, 0.04),
+            color=(0.05, 0.08, 0.12)
+        )
+        add_train_part(
+            local_offset=(0.45, 0.48, loco_center_z + 2.82),
+            scale=(0.36, 0.30, 0.04),
+            color=(0.05, 0.08, 0.12)
+        )
+
+        # Lampu depan lokomotif
+        add_train_part(
+            local_offset=(-0.65, 0.88, loco_center_z + 2.86),
+            scale=(0.13, 0.13, 0.04),
+            color=(1.00, 0.95, 0.65)
+        )
+        add_train_part(
+            local_offset=(0.65, 0.88, loco_center_z + 2.86),
+            scale=(0.13, 0.13, 0.04),
+            color=(1.00, 0.95, 0.65)
+        )
+        add_train_part(
+            local_offset=(0.0, 0.88, loco_center_z + 2.86),
+            scale=(0.13, 0.13, 0.04),
+            color=(1.00, 0.95, 0.65)
+        )
+
+        # Strip oranye dan biru di sisi lokomotif
+        for side_x in [-1.60, 1.60]:
+            add_train_part(
+                local_offset=(side_x, -0.05, loco_center_z),
+                scale=(0.035, 0.10, 2.25),
+                color=(1.00, 0.38, 0.02)
+            )
+            add_train_part(
+                local_offset=(side_x, -0.23, loco_center_z),
+                scale=(0.035, 0.055, 2.10),
+                color=(0.02, 0.18, 0.65)
+            )
+
+            # Panel kecil biru-oranye sebagai pengganti logo tekstual
+            add_train_part(
+                local_offset=(side_x, 0.35, loco_center_z + 0.75),
+                scale=(0.04, 0.23, 0.22),
+                color=(0.02, 0.18, 0.65)
+            )
+            add_train_part(
+                local_offset=(side_x, 0.15, loco_center_z + 0.98),
+                scale=(0.04, 0.12, 0.20),
+                color=(1.00, 0.38, 0.02)
+            )
+
+        # Ventilasi samping lokomotif
+        for side_x in [-1.61, 1.61]:
+            for z in [1.05, 1.35, 1.65]:
+                add_train_part(
+                    local_offset=(side_x, 0.45, z),
+                    scale=(0.035, 0.07, 0.16),
+                    color=(0.12, 0.12, 0.12)
+                )
+
+        # Box/mesin kecil di atas atap
+        for z in [0.8, 1.7, 2.6]:
+            add_train_part(
+                local_offset=(0.0, 1.28, z),
+                scale=(0.45, 0.12, 0.28),
+                color=(0.20, 0.20, 0.20)
+            )
+
+        # Roda lokomotif
+        for z in [0.45, 1.55, 2.65, 3.75]:
+            add_train_wheel((-0.88, -1.23, z))
+            add_train_wheel((0.88, -1.23, z))
+
+        # =========================
+        # B. GERBONG PENUMPANG
+        # =========================
+        coach_centers = [-4.8, -12.2, -19.6]
+
+        for coach_z in coach_centers:
+            # Body gerbong putih
+            add_train_part(
+                local_offset=(0.0, -0.02, coach_z),
+                scale=(1.45, 0.95, 3.35),
+                color=(0.94, 0.94, 0.91)
+            )
+
+            # Atap gerbong abu-abu terang
+            add_train_part(
+                local_offset=(0.0, 0.95, coach_z),
+                scale=(1.35, 0.18, 3.10),
+                color=(0.78, 0.78, 0.76)
+            )
+
+            # Bagian bawah gerbong abu gelap
+            add_train_part(
+                local_offset=(0.0, -0.93, coach_z),
+                scale=(1.45, 0.17, 3.20),
+                color=(0.16, 0.16, 0.16)
+            )
+
+            # Strip oranye dan biru di kedua sisi gerbong
+            for side_x in [-1.50, 1.50]:
+                add_train_part(
+                    local_offset=(side_x, -0.10, coach_z),
+                    scale=(0.035, 0.075, 3.05),
+                    color=(1.00, 0.38, 0.02)
+                )
+                add_train_part(
+                    local_offset=(side_x, -0.25, coach_z),
+                    scale=(0.035, 0.045, 3.05),
+                    color=(0.02, 0.18, 0.65)
+                )
+
+                # Deretan jendela gerbong
+                for w in range(7):
+                    z_window = coach_z - 2.25 + (w * 0.75)
+                    add_train_part(
+                        local_offset=(side_x, 0.35, z_window),
+                        scale=(0.035, 0.23, 0.22),
+                        color=(0.06, 0.09, 0.13)
+                    )
+
+                # Pintu gerbong depan-belakang
+                add_train_part(
+                    local_offset=(side_x, 0.10, coach_z - 2.85),
+                    scale=(0.035, 0.48, 0.18),
+                    color=(0.82, 0.82, 0.78)
+                )
+                add_train_part(
+                    local_offset=(side_x, 0.10, coach_z + 2.85),
+                    scale=(0.035, 0.48, 0.18),
+                    color=(0.82, 0.82, 0.78)
+                )
+
+            # Bogie/roda gerbong
+            for z in [coach_z - 2.15, coach_z + 2.15]:
+                add_train_wheel((-0.85, -1.20, z))
+                add_train_wheel((0.85, -1.20, z))
     
         # 3. PALANG PINTU
         self.gates = []
@@ -390,15 +585,19 @@ class Scene:
                 self.gate_angle = 90.0
                 self.state = 'IDLE'
 
-        # --- UPDATE MATRIX ---
+        # --- UPDATE MATRIX KERETA ---
+        # Semua bagian kereta bergerak mengikuti anchor utama,
+        # tetapi tetap mempertahankan jarak relatif antar lokomotif dan gerbong.
+        train_anchor = glm.vec3(0, 1.75, self.train_z)
+
         for part in self.train_parts:
-            part.pos.z = self.train_z
+            part.pos = train_anchor + part.relative_offset
             part.m_model = part.get_model_matrix()
 
-        # Roda Kereta (Berputar Sinkron)
+        # Roda Kereta berputar sinkron saat kereta bergerak
         wheel_rot_angle = self.train_z * 2.0
-        for wheel, z_offset in self.train_wheels:
-            wheel.pos = glm.vec3(0, 1.75, self.train_z - z_offset) + wheel.relative_offset
+        for wheel, _ in self.train_wheels:
+            wheel.pos = train_anchor + wheel.relative_offset
             wheel.rot.x = wheel_rot_angle
             wheel.m_model = wheel.get_model_matrix()
 
