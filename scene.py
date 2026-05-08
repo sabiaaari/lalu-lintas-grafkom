@@ -2066,6 +2066,17 @@ class Scene:
         for x, z, h in right_upper_house_trees:
             add_pine_tree(x, z, height=h)
 
+        # ==========================================================
+        # 2E. GUA / TUNNEL DI UJUNG ATAS REL
+        # ==========================================================
+        # Pada tampilan kamera saat ini:
+        # - bagian atas layar = Z negatif
+        # Jadi gua/tunnel diletakkan di ujung atas rel.
+        add_tunnel(
+            x=0.0,
+            z=-94.0,
+        )
+
         # ==========================================
         # JALAN TANAH AREA DESA
         # ==========================================
@@ -2094,11 +2105,11 @@ class Scene:
             add_pine_tree(x, z, height=h)
 
         # ==========================================
-        # STASIUN KECIL PEDESAAN
+        # STASIUN KECIL PEDESAAN - AREA AWAL KERETA
         # ==========================================
-        # Stasiun dibuat kecil dan ringan agar tetap cocok dengan tema desa.
-        # Posisi di ujung jalur rel, tidak mengganggu perlintasan utama.
-        st_z = -105
+        # Stasiun sengaja ditempatkan di area awal kereta (bagian bawah map),
+        # sedangkan ujung atas rel dipakai untuk gua/tunnel.
+        st_z = 88
 
         # Peron kiri dan kanan rel
         # Area tengah X -3 sampai 3 dibiarkan kosong untuk jalur kereta.
