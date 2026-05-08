@@ -1893,6 +1893,179 @@ class Scene:
         for x, z, h in left_upper_house_trees:
             add_pine_tree(x, z, height=h)
 
+        # ==========================================================
+        # 2D. AREA RUMAH DESA KANAN ATAS
+        # ==========================================================
+        # Area ini mengikuti sketsa bagian kanan atas:
+        # - X positif karena berada di sisi kanan layar.
+        # - Z negatif karena berada di atas jalan raya pada tampilan kamera atas.
+        # - Rumah dibuat menghadap ke arah jalan raya, yaitu ke Z positif.
+        #
+        # Koordinat aman:
+        # - X sekitar 20 sampai 95
+        # - Z sekitar -90 sampai -20
+        # ==========================================================
+
+        # ----------------------------------------------------------
+        # HALAMAN DAN RUMAH BESAR ATAP ABU/HITAM
+        # ----------------------------------------------------------
+        # Rumah ini menjadi objek dominan di kanan atas seperti acuan.
+        add_yard_fence_with_front_gate(
+            cx=58.0,
+            zc=-72.0,
+            sx=16.0,
+            sz=13.0,
+            gate_x=58.0,
+            gate_width=5.5,
+        )
+
+        add_village_house_facing(
+            x=58.0,
+            z=-73.0,
+            roof_color=(0.18, 0.18, 0.18),
+            body_color=(0.68, 0.64, 0.46),
+            scale=1.25,
+            front_dir=1,
+        )
+
+        # Teras kecil di depan rumah besar kanan atas
+        add_box(
+            "right upper dark roof house front terrace",
+            58.0,
+            -0.055,
+            -58.5,
+            5.5,
+            0.015,
+            2.5,
+            (0.44, 0.48, 0.32),
+        )
+
+        # Jalan tanah dari rumah besar kanan atas menuju jalan raya
+        add_dirt_path(
+            x=58.0,
+            z=-43.0,
+            sx=1.0,
+            sz=18.0,
+            rot_y=0,
+        )
+
+        # ----------------------------------------------------------
+        # RUMAH ATAP MERAH KANAN TENGAH
+        # ----------------------------------------------------------
+        add_yard_fence_with_front_gate(
+            cx=45.0,
+            zc=-42.0,
+            sx=11.5,
+            sz=10.0,
+            gate_x=45.0,
+            gate_width=4.5,
+        )
+
+        add_village_house_facing(
+            x=45.0,
+            z=-43.0,
+            roof_color=(0.66, 0.22, 0.10),
+            body_color=(0.70, 0.64, 0.45),
+            scale=0.98,
+            front_dir=1,
+        )
+
+        add_dirt_path(
+            x=45.0,
+            z=-24.0,
+            sx=0.8,
+            sz=8.0,
+            rot_y=0,
+        )
+
+        # Gubuk kecil di halaman rumah atap merah
+        add_small_shed(
+            x=36.5,
+            z=-31.0,
+            roof_color=(0.65, 0.22, 0.08),
+            scale=0.75,
+        )
+
+        # ----------------------------------------------------------
+        # RUMAH ATAP BIRU KANAN
+        # ----------------------------------------------------------
+        add_yard_fence_with_front_gate(
+            cx=78.0,
+            zc=-42.0,
+            sx=12.0,
+            sz=10.0,
+            gate_x=78.0,
+            gate_width=4.5,
+        )
+
+        add_village_house_facing(
+            x=78.0,
+            z=-43.0,
+            roof_color=(0.04, 0.20, 0.72),
+            body_color=(0.70, 0.67, 0.50),
+            scale=1.02,
+            front_dir=1,
+        )
+
+        add_dirt_path(
+            x=78.0,
+            z=-24.0,
+            sx=0.8,
+            sz=8.0,
+            rot_y=0,
+        )
+
+        # ----------------------------------------------------------
+        # GUBUK KECIL DEKAT SISI KANAN ATAS
+        # ----------------------------------------------------------
+        # Objek ini mengisi area kanan dekat tepi map, seperti bangunan kecil
+        # di sketsa acuan.
+        add_small_shed(
+            x=92.0,
+            z=-23.0,
+            roof_color=(0.60, 0.28, 0.12),
+            scale=0.80,
+        )
+
+        # Pagar pendek untuk gubuk kecil kanan
+        add_fence_line(87.0, -28.0, 97.0, -28.0)
+        add_fence_line(97.0, -28.0, 97.0, -18.0)
+        add_fence_line(97.0, -18.0, 87.0, -18.0)
+        add_fence_line(87.0, -18.0, 87.0, -28.0)
+
+        # ----------------------------------------------------------
+        # JALAN TANAH SISI KANAN ATAS
+        # ----------------------------------------------------------
+        # Jalur ini dibuat seperti akses kecil di kanan atas map.
+        # Tidak terlalu lebar agar tidak mengganggu rumah.
+        add_dirt_path(
+            x=91.0,
+            z=-58.0,
+            sx=0.9,
+            sz=25.0,
+            rot_y=0,
+        )
+
+        # ----------------------------------------------------------
+        # POHON CEMARA AREA RUMAH KANAN ATAS
+        # ----------------------------------------------------------
+        # Pohon dibuat di tepi halaman agar area kanan atas tidak kosong,
+        # tetapi tetap menjauh dari rel dan jalan raya.
+        right_upper_house_trees = [
+            (24, -82, 1.10),
+            (26, -58, 0.95),
+            (25, -28, 1.05),
+            (40, -88, 1.15),
+            (72, -88, 1.00),
+            (95, -82, 1.20),
+            (96, -58, 1.05),
+            (96, -36, 0.95),
+            (68, -24, 1.00),
+        ]
+
+        for x, z, h in right_upper_house_trees:
+            add_pine_tree(x, z, height=h)
+
         # ==========================================
         # JALAN TANAH AREA DESA
         # ==========================================
