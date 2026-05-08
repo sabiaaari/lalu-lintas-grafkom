@@ -196,6 +196,140 @@ class Scene:
         app = self.app
         add = self.add_object
         
+        # ==========================================================
+        # PETA KOORDINAT UTAMA - RURAL VILLAGE ENVIRONMENT
+        # ==========================================================
+        # Project ini memakai ukuran map 200 x 0.2 x 200 unit.
+        #
+        # Catatan penting:
+        # - ColorCube memakai mesh dasar dari -1 sampai 1.
+        # - Jadi scale=(100, 0.1, 100) menghasilkan ukuran aktual:
+        #   X = 200 unit, Y = 0.2 unit, Z = 200 unit.
+        #
+        # Sistem koordinat:
+        # - X negatif  = sisi kiri map
+        # - X positif  = sisi kanan map
+        # - Z positif  = area atas/belakang map
+        # - Z negatif  = area bawah/depan map
+        # - Y          = tinggi objek dari permukaan tanah
+        #
+        # Layout utama:
+        # - Tanah utama       : X -100 s/d 100, Z -100 s/d 100
+        # - Jalan raya        : memanjang arah X, berada di Z sekitar -8 s/d 8
+        # - Rel kereta        : memanjang arah Z, berada di X sekitar -3 s/d 3
+        # - Crossing utama    : pusat map, sekitar X -10 s/d 10 dan Z -10 s/d 10
+        #
+        # Zona rural village berdasarkan sketsa:
+        # - Rumah kiri atas   : X -90 s/d -20, Z 20 s/d 90
+        # - Rumah kanan atas  : X 20 s/d 95,  Z 20 s/d 90
+        # - Sawah kiri bawah  : X -95 s/d -25, Z -95 s/d -25
+        # - Kebun kanan bawah : X 25 s/d 65,  Z -95 s/d -25
+        # - Sawah air kanan   : X 70 s/d 95,  Z -95 s/d -35
+        # - Tunnel rel atas   : X -8 s/d 8,   Z 85 s/d 100
+        #
+        # Zona larangan untuk objek environment:
+        # - Jangan taruh pohon/rumah di area rel: X -4 s/d 4
+        # - Jangan taruh pohon/rumah di area jalan: Z -10 s/d 10
+        # - Jangan taruh objek besar di crossing: X -12 s/d 12, Z -12 s/d 12
+        #
+        # Tujuan komentar ini:
+        # - Memudahkan pembagian kerja GitHub antar branch.
+        # - Menghindari objek lingkungan menabrak kereta, jalan, kendaraan, dan palang.
+        # - Menjaga semua objek tetap sesuai sketsa 200 x 200 unit.
+        # ==========================================================
+        
+        # ==========================================================
+        # KONSTANTA ZONA MAP
+        # ==========================================================
+        # Konstanta ini dipakai sebagai panduan posisi objek environment.
+        # Belum semua langsung dipakai di tahap ini, tetapi akan dipakai
+        # pada tahap rumah, sawah, pagar, pohon, dan tunnel.
+
+        MAP_HALF_SIZE = 100.0
+
+        ROAD_CENTER_Z = 0.0
+        ROAD_HALF_WIDTH = 8.0
+        ROAD_SAFE_MARGIN = 10.0
+
+        RAIL_CENTER_X = 0.0
+        RAIL_HALF_WIDTH = 3.5
+        RAIL_SAFE_MARGIN = 4.0
+
+        CROSSING_SAFE_X = 12.0
+        CROSSING_SAFE_Z = 12.0
+
+        LEFT_HOUSE_ZONE = {
+            "x_min": -90.0,
+            "x_max": -20.0,
+            "z_min": 20.0,
+            "z_max": 90.0,
+        }
+
+        RIGHT_HOUSE_ZONE = {
+            "x_min": 20.0,
+            "x_max": 95.0,
+            "z_min": 20.0,
+            "z_max": 90.0,
+        }
+
+        LEFT_FARM_ZONE = {
+            "x_min": -95.0,
+            "x_max": -25.0,
+            "z_min": -95.0,
+            "z_max": -25.0,
+        }
+
+        RIGHT_FARM_ZONE = {
+            "x_min": 25.0,
+            "x_max": 65.0,
+            "z_min": -95.0,
+            "z_max": -25.0,
+        }
+
+        RIGHT_RICE_PADDY_ZONE = {
+            "x_min": 70.0,
+            "x_max": 95.0,
+            "z_min": -95.0,
+            "z_max": -35.0,
+        }
+
+        TUNNEL_ZONE = {
+            "x_min": -8.0,
+            "x_max": 8.0,
+            "z_min": 85.0,
+            "z_max": 100.0,
+        }
+        
+        def is_inside_crossing_safe_area(x, z):
+            # Mengecek apakah posisi objek masuk area crossing utama.
+            # Jika True, objek besar seperti rumah/pohon sebaiknya tidak ditaruh di sini.
+            return abs(x) <= CROSSING_SAFE_X and abs(z) <= CROSSING_SAFE_Z
+
+        def is_inside_road_safe_area(z):
+            # Mengecek apakah posisi objek terlalu dekat dengan jalan raya.
+            # Jalan berada di sekitar Z = 0, jadi environment besar perlu menjauh.
+            return abs(z - ROAD_CENTER_Z) <= ROAD_SAFE_MARGIN
+
+        def is_inside_rail_safe_area(x):
+            # Mengecek apakah posisi objek terlalu dekat dengan rel kereta.
+            # Rel berada di sekitar X = 0, jadi pohon/rumah jangan masuk area ini.
+            return abs(x - RAIL_CENTER_X) <= RAIL_SAFE_MARGIN
+
+        def is_safe_environment_position(x, z):
+            # Fungsi bantu untuk memastikan posisi objek environment aman.
+            # Dipakai nanti saat menaruh pohon, rumah, pagar, dan sawah.
+            if is_inside_crossing_safe_area(x, z):
+                return False
+            if is_inside_road_safe_area(z):
+                return False
+            if is_inside_rail_safe_area(x):
+                return False
+            if x < -MAP_HALF_SIZE or x > MAP_HALF_SIZE:
+                return False
+            if z < -MAP_HALF_SIZE or z > MAP_HALF_SIZE:
+                return False
+            return True
+        
         def add_pine_tree(x, z, height=1.0):
             # Pohon cemara low-poly model limas
             # height di sini sebagai faktor skala, bukan tinggi meter asli
@@ -257,14 +391,40 @@ class Scene:
             add(ColorCube(app, pos=(x - 0.55, 1.50, z), rot=(0, 0, -18), scale=(0.72, 0.08, 0.20), color=leaf_color))
             add(ColorCube(app, pos=(x, 1.50, z + 0.55), rot=(18, 0, 0), scale=(0.20, 0.08, 0.72), color=leaf_color))
             add(ColorCube(app, pos=(x, 1.50, z - 0.55), rot=(-18, 0, 0), scale=(0.20, 0.08, 0.72), color=leaf_color))
+            
+        def add_dirt_path(x, z, sx, sz, rot_y=0):
+            # Jalan tanah tipis di atas tanah hijau
+            add(
+                ColorCube(
+                    app,
+                    pos=(x, -0.125, z),
+                    rot=(0, rot_y, 0),
+                    scale=(sx, 0.015, sz),
+                    color=(0.47, 0.34, 0.16),
+                )
+            )
 
-        # def add_dirt_path(x, z, sx, sz):
-        #     # Jalan tanah kecil
-        #     add(ColorCube(app, pos=(x, -0.055, z), scale=(sx, 0.025, sz), color=(0.47, 0.34, 0.16)))
+        # def add_dirt_patch(x, z, sx, sz, rot_y=0):
+        #     # Bercak tanah kecil agar area desa tidak terlalu polos
+        #     dirt_colors = [
+        #         (0.39, 0.27, 0.12),
+        #         (0.45, 0.31, 0.14),
+        #         (0.52, 0.38, 0.18),
+        #     ]
+
+        #     add(
+        #         ColorCube(
+        #             app,
+        #             pos=(x, -0.118, z),
+        #             rot=(0, rot_y, 0),
+        #             scale=(sx, 0.008, sz),
+        #             color=random.choice(dirt_colors),
+        #         )
+        #     )
 
         # 1. LINGKUNGAN JALAN, TANAH LUAS & REL PANJANG
-        # Tanah Hijau (Lebar 100, Panjang 400)
-        add(ColorCube(app, pos=(0, -0.25, 0), scale=(100, 0.1, 400), color=(0.34, 0.56, 0.25)))
+        # Tanah Hijau (Lebar 100, Panjang 100)
+        add(ColorCube(app, pos=(0, -0.25, 0), scale=(100, 0.1, 100), color=(0.34, 0.56, 0.25)))
         
         # Jalan Raya (Lebar untuk mobil besar)
         add(ColorCube(app, pos=(0, -0.1, 0), scale=(100, 0.05, 8.0), color=(0.15, 0.15, 0.15))) 
@@ -276,13 +436,13 @@ class Scene:
             add(ColorCube(app, pos=(x_pos, -0.04, 0), scale=(1.5, 0.01, 0.3), color=(0.9, 0.9, 0.9))) 
 
         # --- REL TUNGGAL PANJANG MEMBELAH JALAN (Z = 400) ---
-        add(ColorCube(app, pos=(0, -0.05, 0), scale=(3.5, 0.1, 400), color=(0.35, 0.35, 0.35))) # Kerikil
-        add(ColorCube(app, pos=(-1.5, 0.15, 0), scale=(0.1, 0.1, 400), color=(0.7, 0.7, 0.7))) # Rel Kiri
-        add(ColorCube(app, pos=(1.5, 0.15, 0), scale=(0.1, 0.1, 400), color=(0.7, 0.7, 0.7))) # Rel Kanan
+        add(ColorCube(app, pos=(0, -0.05, 0), scale=(3.5, 0.1, 100), color=(0.35, 0.35, 0.35))) # Kerikil
+        add(ColorCube(app, pos=(-1.5, 0.15, 0), scale=(0.1, 0.1, 100), color=(0.7, 0.7, 0.7))) # Rel Kiri
+        add(ColorCube(app, pos=(1.5, 0.15, 0), scale=(0.1, 0.1, 100), color=(0.7, 0.7, 0.7))) # Rel Kanan
         
         # Bantalan Rel Kayu
         for i in range(-130, 130):
-            z_pos = i * 1.5
+            z_pos = i * 1.0
             if abs(z_pos) > 9.0: # Dikosongkan pas di jalan aspal
                 add(ColorCube(app, pos=(0, 0.05, z_pos), scale=(2.2, 0.05, 0.3), color=(0.4, 0.25, 0.1)))
 
@@ -298,6 +458,41 @@ class Scene:
 
         # POHON AREA DEPAN REL - SESUAI LINGKARAN BIRU ACUAN
         # Posisi dibuat menjauh dari rel agar tidak menabrak kereta.
+        
+        # ==========================================
+        # JALAN TANAH AREA DESA
+        # ==========================================
+
+        add_dirt_path(-24, 22, 3.0, 22.0, -18)
+        add_dirt_path(24, 22, 3.0, 22.0, 18)
+        add_dirt_path(12, 22, 2.2, 12.0, 0)
+        add_dirt_path(14, -60, 2.6, 36.0, 0)
+        add_dirt_path(8, -92, 8.0, 2.0, 0)
+
+        dirt_patches = [
+            (-36, 28, 2.5, 1.2, 12),
+            (-30, 35, 1.8, 1.0, -8),
+            (-18, 18, 2.2, 1.1, 25),
+            (-14, 38, 1.6, 0.9, -18),
+
+            (36, 28, 2.5, 1.2, -12),
+            (30, 35, 1.8, 1.0, 8),
+            (18, 18, 2.2, 1.1, -25),
+            (14, 38, 1.6, 0.9, 18),
+
+            (-35, -28, 2.4, 1.1, 10),
+            (-25, -42, 1.8, 0.9, -15),
+            (35, -28, 2.4, 1.1, -10),
+            (25, -42, 1.8, 0.9, 15),
+
+            (16, -70, 2.0, 1.0, 6),
+            (12, -82, 1.5, 0.8, -10),
+            (18, -96, 2.2, 1.0, 15),
+        ]
+
+        # for x, z, sx, sz, rot in dirt_patches:
+        #     add_dirt_patch(x, z, sx, sz, rot)
+        
         front_rail_trees = [
             (-12, 15, 1.15),
             (-15, 21, 1.35),
@@ -315,32 +510,6 @@ class Scene:
         for x, z, h in front_rail_trees:
             add_pine_tree(x, z, height=h)
 
-        # Semak kecil agar area tidak terlalu kosong
-        front_rail_shrubs = [
-            (-6, 18),
-            (-13, 25),
-            (-7, 34),
-            (6, 17),
-            (14, 26),
-            (7, 36),
-        ]
-
-        # Sawah dominan di area kiri-kanan perlintasan
-        rice_positions = [
-            (-42, -34),
-            (-24, -34),
-            (24, -34),
-            (42, -34),
-            (-42, 34),
-            (-24, 34),
-            (24, 34),
-            (42, 34),
-            (-42, -18),
-            (42, -18),
-            (-42, 18),
-            (42, 18),
-        ]
-
         # Pohon tropis
         banana_positions = [
             (0, 0),
@@ -354,6 +523,16 @@ class Scene:
             (80, 0),
             (90, 0),
             (100, 0),
+            (100, 10),
+            (100, 20),
+            (100, 30),
+            (100, 40),
+            (100, 50),
+            (10, 100),
+            (20, 100),
+            (30, 100),
+            (40, 100),
+            (50, 100),
             (-10, 0),
             (-20, 0),
             (-30, 0),
