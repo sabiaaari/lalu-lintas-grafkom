@@ -329,32 +329,79 @@ class Scene:
             if z < -MAP_HALF_SIZE or z > MAP_HALF_SIZE:
                 return False
             return True
-        
-        def add_pine_tree(x, z, height=1.0):
-            # Pohon cemara low-poly model limas
-            # height di sini sebagai faktor skala, bukan tinggi meter asli
+
+        # ==========================================================
+        # HELPER FUNCTION - RURAL VILLAGE ENVIRONMENT
+        # ==========================================================
+        # Semua fungsi bantu environment ditaruh di sini agar kode utama
+        # di bagian bawah lebih pendek, rapi, dan mudah dibaca anggota tim.
+        #
+        # Catatan:
+        # - Semua ukuran memakai satuan unit OpenGL project ini.
+        # - pos=(x, y, z), scale=(sx, sy, sz).
+        # - ColorCube memakai ukuran dasar -1 sampai 1, jadi scale akan
+        #   menghasilkan ukuran aktual 2x dari nilai scale.
+        # ==========================================================
+
+        def add_box(
+            name,
+            x,
+            y,
+            z,
+            sx,
+            sy,
+            sz,
+            color,
+            rot=(0, 0, 0),
+            check_safe=False,
+        ):
+            # Helper dasar untuk membuat objek kubus berwarna.
+            # Parameter name hanya untuk dokumentasi/comment saat membaca kode.
+            # check_safe=True dipakai untuk objek besar seperti rumah/pohon,
+            # supaya tidak masuk area rel, jalan raya, atau crossing.
+            if check_safe and not is_safe_environment_position(x, z):
+                return None
+
+            obj = ColorCube(
+                app,
+                pos=(x, y, z),
+                rot=rot,
+                scale=(sx, sy, sz),
+                color=color,
+            )
+            add(obj)
+            return obj
+
+        def add_pine_tree(x, z, height=1.0, check_safe=True):
+            # Pohon cemara low-poly.
+            # Dibuat dari batang kubus dan 3 tumpuk daun piramida.
+            # Cocok untuk area desa dan pinggir rel, tetapi tidak boleh
+            # masuk jalur rel/jalan/crossing.
+            if check_safe and not is_safe_environment_position(x, z):
+                return
 
             trunk_color = (0.32, 0.18, 0.08)
             leaf_dark = (0.07, 0.32, 0.10)
             leaf_mid = (0.10, 0.45, 0.13)
             leaf_light = (0.14, 0.58, 0.16)
 
-            # Batang
-            add(
-                ColorCube(
-                    app,
-                    pos=(x, 0.55 * height, z),
-                    scale=(0.18 * height, 0.55 * height, 0.18 * height),
-                    color=trunk_color,
-                )
+            # Batang pohon
+            add_box(
+                "pine tree trunk",
+                x,
+                0.55 * height,
+                z,
+                0.18 * height,
+                0.55 * height,
+                0.18 * height,
+                trunk_color,
             )
 
-            # Daun bawah besar
+            # Daun bawah
             add(
                 ColorPyramid(
                     app,
                     pos=(x, 1.55 * height, z),
-                    rot=(0, 0, 0),
                     scale=(1.25 * height, 0.90 * height, 1.25 * height),
                     color=leaf_dark,
                 )
@@ -365,7 +412,6 @@ class Scene:
                 ColorPyramid(
                     app,
                     pos=(x, 2.25 * height, z),
-                    rot=(0, 0, 0),
                     scale=(0.95 * height, 0.80 * height, 0.95 * height),
                     color=leaf_mid,
                 )
@@ -376,51 +422,454 @@ class Scene:
                 ColorPyramid(
                     app,
                     pos=(x, 2.90 * height, z),
-                    rot=(0, 0, 0),
                     scale=(0.65 * height, 0.70 * height, 0.65 * height),
                     color=leaf_light,
                 )
             )
 
-        def add_banana_tree(x, z):
-            # Pohon tropis/pisang sederhana
-            add(ColorCube(app, pos=(x, 0.75, z), scale=(0.17, 0.75, 0.17), color=(0.34, 0.28, 0.10)))
-
-            leaf_color = (0.10, 0.58, 0.10)
-            add(ColorCube(app, pos=(x + 0.55, 1.50, z), rot=(0, 0, 18), scale=(0.72, 0.08, 0.20), color=leaf_color))
-            add(ColorCube(app, pos=(x - 0.55, 1.50, z), rot=(0, 0, -18), scale=(0.72, 0.08, 0.20), color=leaf_color))
-            add(ColorCube(app, pos=(x, 1.50, z + 0.55), rot=(18, 0, 0), scale=(0.20, 0.08, 0.72), color=leaf_color))
-            add(ColorCube(app, pos=(x, 1.50, z - 0.55), rot=(-18, 0, 0), scale=(0.20, 0.08, 0.72), color=leaf_color))
-            
         def add_dirt_path(x, z, sx, sz, rot_y=0):
-            # Jalan tanah tipis di atas tanah hijau
-            add(
-                ColorCube(
-                    app,
-                    pos=(x, -0.125, z),
-                    rot=(0, rot_y, 0),
-                    scale=(sx, 0.015, sz),
-                    color=(0.47, 0.34, 0.16),
-                )
+            # Jalan tanah tipis di atas permukaan rumput.
+            # Posisi Y dibuat sedikit di atas tanah agar tidak z-fighting.
+            add_box(
+                "dirt path",
+                x,
+                -0.125,
+                z,
+                sx,
+                0.015,
+                sz,
+                (0.47, 0.34, 0.16),
+                rot=(0, rot_y, 0),
             )
 
-        # def add_dirt_patch(x, z, sx, sz, rot_y=0):
-        #     # Bercak tanah kecil agar area desa tidak terlalu polos
-        #     dirt_colors = [
-        #         (0.39, 0.27, 0.12),
-        #         (0.45, 0.31, 0.14),
-        #         (0.52, 0.38, 0.18),
-        #     ]
+        def add_fence_line(x1, z1, x2, z2, post_gap=4.0):
+            # Membuat pagar lurus dari titik awal ke titik akhir.
+            # Pagar terdiri dari tiang vertikal dan dua bilah horizontal.
+            fence_post_color = (0.30, 0.16, 0.06)
+            fence_rail_color = (0.42, 0.22, 0.08)
 
-        #     add(
-        #         ColorCube(
-        #             app,
-        #             pos=(x, -0.118, z),
-        #             rot=(0, rot_y, 0),
-        #             scale=(sx, 0.008, sz),
-        #             color=random.choice(dirt_colors),
-        #         )
-        #     )
+            dx = x2 - x1
+            dz = z2 - z1
+            length = math.sqrt(dx * dx + dz * dz)
+
+            if length <= 0.01:
+                return
+
+            angle_y = math.degrees(math.atan2(dx, dz))
+            count = max(2, int(length / post_gap) + 1)
+
+            # Tiang pagar
+            for i in range(count):
+                t = i / (count - 1)
+                px = x1 + dx * t
+                pz = z1 + dz * t
+
+                add_box(
+                    "fence post",
+                    px,
+                    0.55,
+                    pz,
+                    0.12,
+                    0.55,
+                    0.12,
+                    fence_post_color,
+                )
+
+            # Bilah pagar atas dan bawah
+            mid_x = (x1 + x2) * 0.5
+            mid_z = (z1 + z2) * 0.5
+
+            add_box(
+                "upper fence rail",
+                mid_x,
+                0.75,
+                mid_z,
+                0.08,
+                0.08,
+                length * 0.5,
+                fence_rail_color,
+                rot=(0, angle_y, 0),
+            )
+            add_box(
+                "lower fence rail",
+                mid_x,
+                0.38,
+                mid_z,
+                0.07,
+                0.07,
+                length * 0.5,
+                fence_rail_color,
+                rot=(0, angle_y, 0),
+            )
+
+        def add_fence_rect(cx, zc, sx, sz):
+            # Membuat pagar kotak mengelilingi area.
+            # cx, zc = titik tengah area.
+            # sx, sz = setengah ukuran area, bukan ukuran penuh.
+            x_min = cx - sx
+            x_max = cx + sx
+            z_min = zc - sz
+            z_max = zc + sz
+
+            add_fence_line(x_min, z_min, x_max, z_min)
+            add_fence_line(x_max, z_min, x_max, z_max)
+            add_fence_line(x_max, z_max, x_min, z_max)
+            add_fence_line(x_min, z_max, x_min, z_min)
+
+        def add_house(x, z, roof_color=(0.75, 0.18, 0.08), body_color=(0.72, 0.64, 0.45), scale=1.0):
+            # Rumah desa sederhana.
+            # Terdiri dari pondasi, badan rumah, atap, pintu, dan jendela.
+            if not is_safe_environment_position(x, z):
+                return
+
+            # Pondasi
+            add_box(
+                "house foundation",
+                x,
+                0.12 * scale,
+                z,
+                3.2 * scale,
+                0.12 * scale,
+                2.6 * scale,
+                (0.42, 0.42, 0.38),
+            )
+
+            # Badan rumah
+            add_box(
+                "house body",
+                x,
+                1.05 * scale,
+                z,
+                2.8 * scale,
+                0.95 * scale,
+                2.2 * scale,
+                body_color,
+            )
+
+            # Atap utama
+            add_box(
+                "house roof block",
+                x,
+                2.25 * scale,
+                z,
+                3.2 * scale,
+                0.35 * scale,
+                2.6 * scale,
+                roof_color,
+            )
+
+            # Nok/puncak atap sederhana
+            add_box(
+                "house roof ridge",
+                x,
+                2.75 * scale,
+                z,
+                0.18 * scale,
+                0.45 * scale,
+                2.7 * scale,
+                roof_color,
+            )
+
+            # Pintu depan menghadap jalan raya/crossing
+            add_box(
+                "house door",
+                x,
+                0.65 * scale,
+                z - 2.22 * scale,
+                0.38 * scale,
+                0.65 * scale,
+                0.04 * scale,
+                (0.22, 0.11, 0.04),
+            )
+
+            # Jendela depan kiri dan kanan
+            add_box(
+                "house front left window",
+                x - 1.0 * scale,
+                1.20 * scale,
+                z - 2.25 * scale,
+                0.35 * scale,
+                0.28 * scale,
+                0.04 * scale,
+                (0.08, 0.13, 0.16),
+            )
+            add_box(
+                "house front right window",
+                x + 1.0 * scale,
+                1.20 * scale,
+                z - 2.25 * scale,
+                0.35 * scale,
+                0.28 * scale,
+                0.04 * scale,
+                (0.08, 0.13, 0.16),
+            )
+
+        def add_small_shed(x, z, roof_color=(0.65, 0.25, 0.10), scale=1.0):
+            # Gubuk kecil/pos kecil untuk detail area desa.
+            if not is_safe_environment_position(x, z):
+                return
+
+            add_box(
+                "small shed body",
+                x,
+                0.65 * scale,
+                z,
+                1.0 * scale,
+                0.65 * scale,
+                0.9 * scale,
+                (0.62, 0.50, 0.32),
+            )
+            add_box(
+                "small shed roof",
+                x,
+                1.42 * scale,
+                z,
+                1.2 * scale,
+                0.22 * scale,
+                1.1 * scale,
+                roof_color,
+            )
+            add_box(
+                "small shed door",
+                x,
+                0.45 * scale,
+                z - 0.92 * scale,
+                0.25 * scale,
+                0.45 * scale,
+                0.04 * scale,
+                (0.20, 0.10, 0.04),
+            )
+
+        def add_crop_field(cx, zc, sx, sz, crop_rows=7, crop_cols=10):
+            # Petak kebun/sawah kering.
+            # sx dan sz adalah setengah ukuran bidang.
+            soil_color = (0.36, 0.24, 0.10)
+            crop_color = (0.13, 0.50, 0.12)
+
+            # Tanah petak
+            add_box(
+                "crop field soil",
+                cx,
+                -0.09,
+                zc,
+                sx,
+                0.025,
+                sz,
+                soil_color,
+            )
+
+            # Pagar keliling petak
+            add_fence_rect(cx, zc, sx + 1.2, sz + 1.2)
+
+            # Tanaman grid
+            if crop_rows <= 1 or crop_cols <= 1:
+                return
+
+            for r in range(crop_rows):
+                for c in range(crop_cols):
+                    px = cx - sx + 2.0 + (c * ((sx * 2.0 - 4.0) / (crop_cols - 1)))
+                    pz = zc - sz + 2.0 + (r * ((sz * 2.0 - 4.0) / (crop_rows - 1)))
+
+                    add_box(
+                        "crop plant stem",
+                        px,
+                        0.20,
+                        pz,
+                        0.08,
+                        0.20,
+                        0.08,
+                        crop_color,
+                    )
+                    add(
+                        ColorPyramid(
+                            app,
+                            pos=(px, 0.55, pz),
+                            scale=(0.28, 0.35, 0.28),
+                            color=(0.10, 0.45, 0.10),
+                        )
+                    )
+
+        def add_rice_paddy(cx, zc, sx, sz, rows=6, cols=5):
+            # Sawah basah/berair.
+            # Dibuat dari bidang tanah, lapisan air, dan bibit padi.
+            mud_color = (0.30, 0.21, 0.10)
+            water_color = (0.25, 0.48, 0.55)
+            rice_color = (0.25, 0.65, 0.18)
+
+            # Lumpur sawah
+            add_box(
+                "rice paddy mud",
+                cx,
+                -0.10,
+                zc,
+                sx,
+                0.025,
+                sz,
+                mud_color,
+            )
+
+            # Air sawah tipis
+            add_box(
+                "rice paddy water",
+                cx,
+                -0.055,
+                zc,
+                sx - 0.4,
+                0.010,
+                sz - 0.4,
+                water_color,
+            )
+
+            # Pagar keliling sawah
+            add_fence_rect(cx, zc, sx + 1.0, sz + 1.0)
+
+            # Bibit padi
+            for r in range(rows):
+                for c in range(cols):
+                    px = cx - sx + 1.5 + (c * ((sx * 2.0 - 3.0) / max(1, cols - 1)))
+                    pz = zc - sz + 1.5 + (r * ((sz * 2.0 - 3.0) / max(1, rows - 1)))
+
+                    add_box(
+                        "rice seedling vertical leaf",
+                        px,
+                        0.22,
+                        pz,
+                        0.04,
+                        0.28,
+                        0.04,
+                        rice_color,
+                    )
+                    add_box(
+                        "rice seedling side leaf",
+                        px + 0.08,
+                        0.25,
+                        pz,
+                        0.12,
+                        0.035,
+                        0.035,
+                        rice_color,
+                        rot=(0, 0, 20),
+                    )
+
+        def add_sunflower_row(start_x, z, count=8, gap=2.0):
+            # Deretan bunga matahari sebagai detail dekat kebun.
+            stem_color = (0.12, 0.42, 0.08)
+            petal_color = (0.95, 0.70, 0.05)
+            center_color = (0.28, 0.14, 0.04)
+
+            for i in range(count):
+                x = start_x + i * gap
+
+                if not is_safe_environment_position(x, z):
+                    continue
+
+                add_box(
+                    "sunflower stem",
+                    x,
+                    0.45,
+                    z,
+                    0.04,
+                    0.45,
+                    0.04,
+                    stem_color,
+                )
+                add_box(
+                    "sunflower petal block vertical",
+                    x,
+                    1.05,
+                    z,
+                    0.20,
+                    0.28,
+                    0.04,
+                    petal_color,
+                )
+                add_box(
+                    "sunflower petal block horizontal",
+                    x,
+                    1.05,
+                    z,
+                    0.04,
+                    0.28,
+                    0.20,
+                    petal_color,
+                )
+                add_box(
+                    "sunflower center",
+                    x,
+                    1.05,
+                    z - 0.05,
+                    0.09,
+                    0.09,
+                    0.03,
+                    center_color,
+                )
+
+        def add_tunnel(x=0.0, z=94.0):
+            # Terowongan rel sederhana di ujung atas map.
+            # Dibuat dari blok beton kiri, kanan, atas, dan belakang.
+            # Area tengah tetap kosong untuk jalur rel.
+            concrete = (0.48, 0.48, 0.48)
+            dark_opening = (0.05, 0.06, 0.06)
+
+            # Dinding kiri
+            add_box(
+                "tunnel left wall",
+                x - 4.0,
+                2.0,
+                z,
+                1.2,
+                2.2,
+                4.5,
+                concrete,
+            )
+
+            # Dinding kanan
+            add_box(
+                "tunnel right wall",
+                x + 4.0,
+                2.0,
+                z,
+                1.2,
+                2.2,
+                4.5,
+                concrete,
+            )
+
+            # Atap utama
+            add_box(
+                "tunnel top block",
+                x,
+                4.3,
+                z,
+                5.2,
+                1.0,
+                4.5,
+                concrete,
+            )
+
+            # Back wall gelap agar terlihat seperti mulut tunnel
+            add_box(
+                "tunnel dark opening",
+                x,
+                2.0,
+                z + 4.55,
+                2.6,
+                1.9,
+                0.10,
+                dark_opening,
+            )
+
+            # Bibir beton depan
+            add_box(
+                "tunnel front cap",
+                x,
+                4.9,
+                z - 4.7,
+                5.6,
+                0.35,
+                0.25,
+                concrete,
+            )
 
         # 1. LINGKUNGAN JALAN, TANAH LUAS & REL PANJANG
         # Tanah Hijau (Lebar 100, Panjang 100)
@@ -468,30 +917,6 @@ class Scene:
         add_dirt_path(12, 22, 2.2, 12.0, 0)
         add_dirt_path(14, -60, 2.6, 36.0, 0)
         add_dirt_path(8, -92, 8.0, 2.0, 0)
-
-        dirt_patches = [
-            (-36, 28, 2.5, 1.2, 12),
-            (-30, 35, 1.8, 1.0, -8),
-            (-18, 18, 2.2, 1.1, 25),
-            (-14, 38, 1.6, 0.9, -18),
-
-            (36, 28, 2.5, 1.2, -12),
-            (30, 35, 1.8, 1.0, 8),
-            (18, 18, 2.2, 1.1, -25),
-            (14, 38, 1.6, 0.9, 18),
-
-            (-35, -28, 2.4, 1.1, 10),
-            (-25, -42, 1.8, 0.9, -15),
-            (35, -28, 2.4, 1.1, -10),
-            (25, -42, 1.8, 0.9, 15),
-
-            (16, -70, 2.0, 1.0, 6),
-            (12, -82, 1.5, 0.8, -10),
-            (18, -96, 2.2, 1.0, 15),
-        ]
-
-        # for x, z, sx, sz, rot in dirt_patches:
-        #     add_dirt_patch(x, z, sx, sz, rot)
         
         front_rail_trees = [
             (-12, 15, 1.15),
@@ -509,65 +934,6 @@ class Scene:
 
         for x, z, h in front_rail_trees:
             add_pine_tree(x, z, height=h)
-
-        # Pohon tropis
-        banana_positions = [
-            (0, 0),
-            (10, 0),
-            (20, 0),
-            (30, 0),
-            (40, 0),
-            (50, 0),
-            (60, 0),
-            (70, 0),
-            (80, 0),
-            (90, 0),
-            (100, 0),
-            (100, 10),
-            (100, 20),
-            (100, 30),
-            (100, 40),
-            (100, 50),
-            (10, 100),
-            (20, 100),
-            (30, 100),
-            (40, 100),
-            (50, 100),
-            (-10, 0),
-            (-20, 0),
-            (-30, 0),
-            (-40, 0),
-            (-50, 0),
-            (-60, 0),
-            (-70, 0),
-            (-80, 0),
-            (-90, 0),
-            (-100, 0),
-            (0, 10),
-            (0, 20),
-            (0, 30),
-            (0, 40),
-            (0, 50),
-            (0, 60),
-            (0, 70),
-            (0, 80),
-            (0, 90),
-            (0, 100),
-            (0, -10),
-            (0, -20),
-            (0, -30),
-            (0, -40),
-            (0, -50),
-            (0, -60),
-            (0, -70),
-            (0, -80),
-            (0, -90),
-            (0, -100),
-            
-        ]
-
-        for x, z in banana_positions:
-            add_banana_tree(x, z)
 
         # Detail tambahan area perlintasan
         add(ColorCube(app, pos=(-9.5, -0.025, 4.0), scale=(0.10, 0.012, 1.8), color=(1.0, 1.0, 1.0)))
