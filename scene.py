@@ -604,6 +604,107 @@ class Scene:
                 (0.08, 0.13, 0.16),
             )
 
+        def add_village_house_facing(
+            x,
+            z,
+            roof_color=(0.75, 0.18, 0.08),
+            body_color=(0.72, 0.64, 0.45),
+            scale=1.0,
+            front_dir=1,
+        ):
+            # Rumah desa dengan arah pintu bisa diatur.
+            # front_dir = 1  berarti pintu menghadap Z positif / arah jalan raya untuk area atas.
+            # front_dir = -1 berarti pintu menghadap Z negatif / arah jalan raya untuk area bawah.
+            if not is_safe_environment_position(x, z):
+                return
+
+            # Pondasi rumah
+            add_box(
+                "village house foundation",
+                x,
+                0.12 * scale,
+                z,
+                3.4 * scale,
+                0.12 * scale,
+                2.7 * scale,
+                (0.42, 0.42, 0.38),
+            )
+
+            # Badan rumah
+            add_box(
+                "village house body",
+                x,
+                1.05 * scale,
+                z,
+                2.9 * scale,
+                0.95 * scale,
+                2.2 * scale,
+                body_color,
+            )
+
+            # Atap utama model low-poly kotak
+            add_box(
+                "village house roof main",
+                x,
+                2.25 * scale,
+                z,
+                3.4 * scale,
+                0.35 * scale,
+                2.7 * scale,
+                roof_color,
+            )
+
+            # Nok/puncak atap sederhana
+            add_box(
+                "village house roof ridge",
+                x,
+                2.75 * scale,
+                z,
+                0.20 * scale,
+                0.45 * scale,
+                2.8 * scale,
+                roof_color,
+            )
+
+            # Posisi sisi depan rumah
+            front_z = z + front_dir * 2.24 * scale
+
+            # Pintu depan
+            add_box(
+                "village house front door",
+                x,
+                0.65 * scale,
+                front_z,
+                0.38 * scale,
+                0.65 * scale,
+                0.04 * scale,
+                (0.22, 0.11, 0.04),
+            )
+
+            # Jendela depan kiri
+            add_box(
+                "village house front left window",
+                x - 1.0 * scale,
+                1.20 * scale,
+                front_z,
+                0.35 * scale,
+                0.28 * scale,
+                0.04 * scale,
+                (0.08, 0.13, 0.16),
+            )
+
+            # Jendela depan kanan
+            add_box(
+                "village house front right window",
+                x + 1.0 * scale,
+                1.20 * scale,
+                front_z,
+                0.35 * scale,
+                0.28 * scale,
+                0.04 * scale,
+                (0.08, 0.13, 0.16),
+            )
+
         def add_small_shed(x, z, roof_color=(0.65, 0.25, 0.10), scale=1.0):
             # Gubuk kecil/pos kecil untuk detail area desa.
             if not is_safe_environment_position(x, z):
@@ -1547,6 +1648,249 @@ class Scene:
         ]
 
         for x, z, h in right_farm_trees:
+            add_pine_tree(x, z, height=h)
+
+        # ==========================================================
+        # 2C. AREA RUMAH DESA KIRI ATAS
+        # ==========================================================
+        # Area ini mengikuti sketsa bagian kiri atas:
+        # - X negatif karena berada di sisi kiri layar.
+        # - Z negatif karena berada di atas jalan raya pada tampilan kamera atas.
+        # - Rumah dibuat menghadap ke arah jalan raya, yaitu ke Z positif.
+        #
+        # Koordinat aman:
+        # - X sekitar -90 sampai -20
+        # - Z sekitar -90 sampai -20
+        # ==========================================================
+
+        def add_yard_fence_with_front_gate(cx, zc, sx, sz, gate_x, gate_width=5.0):
+            # Pagar halaman dengan celah/gapura di sisi depan.
+            # Untuk area rumah atas, sisi depan adalah z_max karena mengarah ke jalan raya Z=0.
+            x_min = cx - sx
+            x_max = cx + sx
+            z_min = zc - sz
+            z_max = zc + sz
+
+            gate_left = gate_x - gate_width * 0.5
+            gate_right = gate_x + gate_width * 0.5
+
+            # Pagar belakang
+            add_fence_line(x_min, z_min, x_max, z_min)
+
+            # Pagar kiri dan kanan
+            add_fence_line(x_min, z_min, x_min, z_max)
+            add_fence_line(x_max, z_min, x_max, z_max)
+
+            # Pagar depan kiri, diberi gap untuk jalan masuk
+            if gate_left > x_min:
+                add_fence_line(x_min, z_max, gate_left, z_max)
+
+            # Pagar depan kanan, diberi gap untuk jalan masuk
+            if gate_right < x_max:
+                add_fence_line(gate_right, z_max, x_max, z_max)
+
+        def add_simple_greenhouse(x, z, scale=1.0):
+            # Greenhouse kecil seperti di sketsa.
+            # Dibuat dari alas, rangka putih, dan atap kaca warna biru muda.
+            if not is_safe_environment_position(x, z):
+                return
+
+            # Alas greenhouse
+            add_box(
+                "greenhouse foundation",
+                x,
+                0.08 * scale,
+                z,
+                2.1 * scale,
+                0.08 * scale,
+                3.0 * scale,
+                (0.50, 0.50, 0.45),
+            )
+
+            # Badan kaca
+            add_box(
+                "greenhouse glass body",
+                x,
+                0.85 * scale,
+                z,
+                1.9 * scale,
+                0.75 * scale,
+                2.7 * scale,
+                (0.70, 0.88, 0.92),
+            )
+
+            # Atap greenhouse
+            add_box(
+                "greenhouse roof",
+                x,
+                1.70 * scale,
+                z,
+                2.0 * scale,
+                0.25 * scale,
+                2.8 * scale,
+                (0.82, 0.92, 0.95),
+            )
+
+            # Rangka tengah
+            add_box(
+                "greenhouse center frame",
+                x,
+                0.95 * scale,
+                z,
+                0.06 * scale,
+                0.85 * scale,
+                2.9 * scale,
+                (0.90, 0.90, 0.88),
+            )
+
+            # Rangka depan
+            add_box(
+                "greenhouse front frame",
+                x,
+                0.95 * scale,
+                z + 2.75 * scale,
+                2.0 * scale,
+                0.85 * scale,
+                0.05 * scale,
+                (0.90, 0.90, 0.88),
+            )
+
+        # ----------------------------------------------------------
+        # HALAMAN DAN RUMAH BESAR ATAP MERAH
+        # ----------------------------------------------------------
+        add_yard_fence_with_front_gate(
+            cx=-60.0,
+            zc=-72.0,
+            sx=18.0,
+            sz=13.0,
+            gate_x=-60.0,
+            gate_width=5.5,
+        )
+
+        add_village_house_facing(
+            x=-60.0,
+            z=-73.0,
+            roof_color=(0.82, 0.22, 0.08),
+            body_color=(0.74, 0.68, 0.50),
+            scale=1.25,
+            front_dir=1,
+        )
+
+        # Jalan masuk dari rumah besar menuju jalan raya
+        add_dirt_path(
+            x=-60.0,
+            z=-43.0,
+            sx=1.0,
+            sz=18.5,
+            rot_y=0,
+        )
+
+        # Halaman depan rumah besar
+        add_box(
+            "large red roof house yard floor",
+            -60.0,
+            -0.070,
+            -59.0,
+            7.0,
+            0.012,
+            4.0,
+            (0.42, 0.50, 0.25),
+        )
+
+        # ----------------------------------------------------------
+        # RUMAH KECIL ATAP COKELAT KIRI
+        # ----------------------------------------------------------
+        add_yard_fence_with_front_gate(
+            cx=-82.0,
+            zc=-42.0,
+            sx=11.0,
+            sz=10.0,
+            gate_x=-82.0,
+            gate_width=4.5,
+        )
+
+        add_village_house_facing(
+            x=-82.0,
+            z=-43.0,
+            roof_color=(0.42, 0.24, 0.12),
+            body_color=(0.68, 0.60, 0.42),
+            scale=0.90,
+            front_dir=1,
+        )
+
+        add_dirt_path(
+            x=-82.0,
+            z=-24.0,
+            sx=0.8,
+            sz=8.0,
+            rot_y=0,
+        )
+
+        # ----------------------------------------------------------
+        # RUMAH ATAP BIRU KIRI-TENGAH
+        # ----------------------------------------------------------
+        add_yard_fence_with_front_gate(
+            cx=-36.0,
+            zc=-42.0,
+            sx=11.5,
+            sz=10.0,
+            gate_x=-36.0,
+            gate_width=4.5,
+        )
+
+        add_village_house_facing(
+            x=-36.0,
+            z=-43.0,
+            roof_color=(0.05, 0.22, 0.70),
+            body_color=(0.70, 0.66, 0.48),
+            scale=0.95,
+            front_dir=1,
+        )
+
+        add_dirt_path(
+            x=-36.0,
+            z=-24.0,
+            sx=0.8,
+            sz=8.0,
+            rot_y=0,
+        )
+
+        # ----------------------------------------------------------
+        # GREENHOUSE KECIL DI ANTARA RUMAH KIRI
+        # ----------------------------------------------------------
+        add_simple_greenhouse(
+            x=-58.0,
+            z=-42.0,
+            scale=0.95,
+        )
+
+        # ----------------------------------------------------------
+        # GUBUK KECIL / SHED DEKAT AREA RUMAH
+        # ----------------------------------------------------------
+        add_small_shed(
+            x=-46.0,
+            z=-82.0,
+            roof_color=(0.70, 0.20, 0.08),
+            scale=0.85,
+        )
+
+        # ----------------------------------------------------------
+        # POHON CEMARA AREA RUMAH KIRI ATAS
+        # ----------------------------------------------------------
+        # Pohon dibuat menyebar di tepi halaman, bukan di tengah jalan.
+        left_upper_house_trees = [
+            (-92, -78, 1.15),
+            (-91, -55, 1.00),
+            (-94, -28, 1.10),
+            (-74, -88, 0.95),
+            (-45, -88, 1.20),
+            (-24, -72, 1.00),
+            (-24, -50, 1.15),
+            (-25, -28, 0.90),
+            (-68, -24, 1.05),
+        ]
+
+        for x, z, h in left_upper_house_trees:
             add_pine_tree(x, z, height=h)
 
         # ==========================================
