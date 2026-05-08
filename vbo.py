@@ -6,6 +6,7 @@ class VBO:
         self.vbos = {
             'color_cube': ColorCubeVBO(ctx),
             'color_plane': ColorPlaneVBO(ctx),
+            'color_pyramid': ColorPyramidVBO(ctx),
         }
 
     def destroy(self):
@@ -76,4 +77,40 @@ class ColorCubeVBO(BaseVBO):
                 for idx in tri:
                     data.extend(normal)
                     data.extend(vertices[idx])
+        return np.array(data, dtype='f4').reshape(-1, 6)
+
+class ColorPyramidVBO(BaseVBO):
+    format = '3f 3f'
+    attribs = ['in_normal', 'in_position']
+
+    def get_vertex_data(self):
+        # Bentuk limas/piramida low-poly
+        v0 = np.array([-1, -1,  1], dtype='f4')  # depan kiri bawah
+        v1 = np.array([ 1, -1,  1], dtype='f4')  # depan kanan bawah
+        v2 = np.array([ 1, -1, -1], dtype='f4')  # belakang kanan bawah
+        v3 = np.array([-1, -1, -1], dtype='f4')  # belakang kiri bawah
+        top = np.array([0, 1, 0], dtype='f4')    # pucuk
+
+        faces = [
+            (v0, v1, top),  # sisi depan
+            (v1, v2, top),  # sisi kanan
+            (v2, v3, top),  # sisi belakang
+            (v3, v0, top),  # sisi kiri
+
+            # alas bawah
+            (v0, v2, v1),
+            (v0, v3, v2),
+        ]
+
+        data = []
+
+        for tri in faces:
+            p0, p1, p2 = tri
+            normal = np.cross(p1 - p0, p2 - p0)
+            normal = normal / np.linalg.norm(normal)
+
+            for p in tri:
+                data.extend(normal)
+                data.extend(p)
+
         return np.array(data, dtype='f4').reshape(-1, 6)

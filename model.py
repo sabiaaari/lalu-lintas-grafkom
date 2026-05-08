@@ -57,3 +57,15 @@ class BaseModelColor:
 class ColorCube(BaseModelColor):
     def __init__(self, app, vao_name='color_cube', pos=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1), color=(1.0, 1.0, 1.0)):
         super().__init__(app, vao_name, pos, rot, scale, color)
+        
+class ColorPyramid(BaseModelColor):
+    def __init__(
+        self,
+        app,
+        vao_name='color_pyramid',
+        pos=(0, 0, 0),
+        rot=(0, 0, 0),
+        scale=(1, 1, 1),
+        color=(1.0, 1.0, 1.0)
+    ):
+        super().__init__(app, vao_name, pos, rot, scale, color)

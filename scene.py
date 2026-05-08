@@ -1,4 +1,4 @@
-from model import ColorCube
+from model import ColorCube, ColorPyramid
 from pyglm import glm
 import math
 import random
@@ -195,10 +195,76 @@ class Scene:
     def load(self):
         app = self.app
         add = self.add_object
+        
+        def add_pine_tree(x, z, height=1.0):
+            # Pohon cemara low-poly model limas
+            # height di sini sebagai faktor skala, bukan tinggi meter asli
+
+            trunk_color = (0.32, 0.18, 0.08)
+            leaf_dark = (0.07, 0.32, 0.10)
+            leaf_mid = (0.10, 0.45, 0.13)
+            leaf_light = (0.14, 0.58, 0.16)
+
+            # Batang
+            add(
+                ColorCube(
+                    app,
+                    pos=(x, 0.55 * height, z),
+                    scale=(0.18 * height, 0.55 * height, 0.18 * height),
+                    color=trunk_color,
+                )
+            )
+
+            # Daun bawah besar
+            add(
+                ColorPyramid(
+                    app,
+                    pos=(x, 1.55 * height, z),
+                    rot=(0, 0, 0),
+                    scale=(1.25 * height, 0.90 * height, 1.25 * height),
+                    color=leaf_dark,
+                )
+            )
+
+            # Daun tengah
+            add(
+                ColorPyramid(
+                    app,
+                    pos=(x, 2.25 * height, z),
+                    rot=(0, 0, 0),
+                    scale=(0.95 * height, 0.80 * height, 0.95 * height),
+                    color=leaf_mid,
+                )
+            )
+
+            # Daun atas
+            add(
+                ColorPyramid(
+                    app,
+                    pos=(x, 2.90 * height, z),
+                    rot=(0, 0, 0),
+                    scale=(0.65 * height, 0.70 * height, 0.65 * height),
+                    color=leaf_light,
+                )
+            )
+
+        def add_banana_tree(x, z):
+            # Pohon tropis/pisang sederhana
+            add(ColorCube(app, pos=(x, 0.75, z), scale=(0.17, 0.75, 0.17), color=(0.34, 0.28, 0.10)))
+
+            leaf_color = (0.10, 0.58, 0.10)
+            add(ColorCube(app, pos=(x + 0.55, 1.50, z), rot=(0, 0, 18), scale=(0.72, 0.08, 0.20), color=leaf_color))
+            add(ColorCube(app, pos=(x - 0.55, 1.50, z), rot=(0, 0, -18), scale=(0.72, 0.08, 0.20), color=leaf_color))
+            add(ColorCube(app, pos=(x, 1.50, z + 0.55), rot=(18, 0, 0), scale=(0.20, 0.08, 0.72), color=leaf_color))
+            add(ColorCube(app, pos=(x, 1.50, z - 0.55), rot=(-18, 0, 0), scale=(0.20, 0.08, 0.72), color=leaf_color))
+
+        # def add_dirt_path(x, z, sx, sz):
+        #     # Jalan tanah kecil
+        #     add(ColorCube(app, pos=(x, -0.055, z), scale=(sx, 0.025, sz), color=(0.47, 0.34, 0.16)))
 
         # 1. LINGKUNGAN JALAN, TANAH LUAS & REL PANJANG
         # Tanah Hijau (Lebar 100, Panjang 400)
-        add(ColorCube(app, pos=(0, -0.25, 0), scale=(100, 0.1, 400), color=(0.25, 0.45, 0.25)))
+        add(ColorCube(app, pos=(0, -0.25, 0), scale=(100, 0.1, 400), color=(0.34, 0.56, 0.25)))
         
         # Jalan Raya (Lebar untuk mobil besar)
         add(ColorCube(app, pos=(0, -0.1, 0), scale=(100, 0.05, 8.0), color=(0.15, 0.15, 0.15))) 
@@ -227,77 +293,282 @@ class Scene:
         add(ColorCube(app, pos=(12, 3.4, 12), scale=(2.0, 0.3, 2.0), color=(0.6, 0.2, 0.2)))   
         add(ColorCube(app, pos=(12, 4.4, 12), scale=(0.04, 1.0, 0.04), color=(0.1, 0.1, 0.1)))
 
-        # 2. DEKORASI LINGKUNGAN (UKURAN POHON DISEIMBANGKAN)
-        for x_pos in range(-40, 41, 15):
-            if abs(x_pos) > 5: 
-                add(ColorCube(app, pos=(x_pos, 2.0, -10.5), scale=(0.1, 2.0, 0.1), color=(0.3, 0.3, 0.3)))
-                add(ColorCube(app, pos=(x_pos, 3.9, -9.8), scale=(0.08, 0.08, 0.8), color=(0.3, 0.3, 0.3)))
-                add(ColorCube(app, pos=(x_pos, 3.8, -9.2), scale=(0.2, 0.1, 0.2), color=(1.0, 1.0, 0.6)))
+        # 2. LINGKUNGAN DESA BERDASARKAN ACUAN FINAL
+        # Fokus job ini: sawah, rumah, toko, kolam, pagar, pohon, dan jalan tanah.
 
-        tree_positions = [
-            (-15, -18), (-25, -12), (-35, -22), (-12, -32), (-45, -18), (-30, -38),
-            (15, -18),  (25, -12),  (35, -22),  (12, -32),  (45, -18),  (30, -38),
-            (-15, 18),  (-25, 12),  (-35, 22),  (-12, 32),  (-45, 18),  (-30, 38),
-            (15, 18),   (25, 12),   (35, 22),   (12, 32),   (45, 18),   (30, 38)
+        # POHON AREA DEPAN REL - SESUAI LINGKARAN BIRU ACUAN
+        # Posisi dibuat menjauh dari rel agar tidak menabrak kereta.
+        front_rail_trees = [
+            (-12, 15, 1.15),
+            (-15, 21, 1.35),
+            (-10, 28, 1.05),
+            (-16, 36, 1.25),
+            (-8, 42, 0.95),
+
+            (8, 14, 1.05),
+            (13, 20, 1.35),
+            (9, 27, 1.10),
+            (15, 34, 1.25),
+            (11, 42, 0.95),
         ]
-        
-        for tx, tz in tree_positions:
-            tree_type = random.choice(['normal', 'pine'])
-            scale_y = random.uniform(1.1, 1.8) # Ukuran diturunkan biar seimbang
+
+        for x, z, h in front_rail_trees:
+            add_pine_tree(x, z, height=h)
+
+        # Semak kecil agar area tidak terlalu kosong
+        front_rail_shrubs = [
+            (-6, 18),
+            (-13, 25),
+            (-7, 34),
+            (6, 17),
+            (14, 26),
+            (7, 36),
+        ]
+
+        # Sawah dominan di area kiri-kanan perlintasan
+        rice_positions = [
+            (-42, -34),
+            (-24, -34),
+            (24, -34),
+            (42, -34),
+            (-42, 34),
+            (-24, 34),
+            (24, 34),
+            (42, 34),
+            (-42, -18),
+            (42, -18),
+            (-42, 18),
+            (42, 18),
+        ]
+
+        # Pohon tropis
+        banana_positions = [
+            (0, 0),
+            (10, 0),
+            (20, 0),
+            (30, 0),
+            (40, 0),
+            (50, 0),
+            (60, 0),
+            (70, 0),
+            (80, 0),
+            (90, 0),
+            (100, 0),
+            (-10, 0),
+            (-20, 0),
+            (-30, 0),
+            (-40, 0),
+            (-50, 0),
+            (-60, 0),
+            (-70, 0),
+            (-80, 0),
+            (-90, 0),
+            (-100, 0),
+            (0, 10),
+            (0, 20),
+            (0, 30),
+            (0, 40),
+            (0, 50),
+            (0, 60),
+            (0, 70),
+            (0, 80),
+            (0, 90),
+            (0, 100),
+            (0, -10),
+            (0, -20),
+            (0, -30),
+            (0, -40),
+            (0, -50),
+            (0, -60),
+            (0, -70),
+            (0, -80),
+            (0, -90),
+            (0, -100),
             
-            # Batang Pohon
-            add(ColorCube(app, pos=(tx, 0.8 * scale_y, tz), scale=(0.4, 1.2 * scale_y, 0.4), color=(0.4, 0.2, 0.1)))
-            if tree_type == 'normal':
-                add(ColorCube(app, pos=(tx, 2.2 * scale_y, tz), scale=(1.6, 1.4 * scale_y, 1.6), color=(0.15, 0.55, 0.2)))
-                add(ColorCube(app, pos=(tx, 3.4 * scale_y, tz), scale=(1.2, 0.8 * scale_y, 1.2), color=(0.2, 0.6, 0.25)))
-            else:
-                add(ColorCube(app, pos=(tx, 1.8 * scale_y, tz), scale=(1.8, 0.8 * scale_y, 1.8), color=(0.1, 0.45, 0.15)))
-                add(ColorCube(app, pos=(tx, 2.8 * scale_y, tz), scale=(1.2, 0.8 * scale_y, 1.2), color=(0.1, 0.45, 0.15)))
-                add(ColorCube(app, pos=(tx, 3.8 * scale_y, tz), scale=(0.6, 0.8 * scale_y, 0.6), color=(0.1, 0.45, 0.15)))
-
-        cloud_positions = [
-            (-20, 15, -30), (20, 16, -25), (0, 14, -40),
-            (-30, 17, 20), (30, 15, 25), (10, 16, 35)
         ]
-        for cx, cy, cz in cloud_positions:
-            add(ColorCube(app, pos=(cx, cy, cz), scale=(3.0, 0.5, 2.0), color=(1.0, 1.0, 1.0)))
-            add(ColorCube(app, pos=(cx+1.5, cy+0.3, cz+0.5), scale=(2.0, 0.6, 1.5), color=(0.95, 0.95, 0.95)))
-            add(ColorCube(app, pos=(cx-1.0, cy+0.2, cz-0.5), scale=(2.5, 0.4, 1.8), color=(1.0, 1.0, 1.0)))
+
+        for x, z in banana_positions:
+            add_banana_tree(x, z)
+
+        # Detail tambahan area perlintasan
+        add(ColorCube(app, pos=(-9.5, -0.025, 4.0), scale=(0.10, 0.012, 1.8), color=(1.0, 1.0, 1.0)))
+        add(ColorCube(app, pos=(9.5, -0.025, -4.0), scale=(0.10, 0.012, 1.8), color=(1.0, 1.0, 1.0)))
+
+        # Pelat beton crossing agar jalan-rel terlihat resmi
+        add(ColorCube(app, pos=(0, 0.01, 0), scale=(3.0, 0.035, 4.2), color=(0.46, 0.46, 0.43)))
         
         # ==========================================
-        # STASIUN PEMBERHENTIAN & TUGU RAKSASA
+        # STASIUN KECIL PEDESAAN
         # ==========================================
-        st_z = -110
-        
-        # 1. PERON (LANTAI STASIUN) DIBELAH DUA SANGAT LEBAR
-        # Digeser jauh ke X = -6 dan X = 6. 
-        # Tengahnya (X = -4 sampai 4) KOSONG TOTAL untuk jalur rel dan Thomas!
-        add(ColorCube(app, pos=(-7.0, 0.2, st_z), scale=(4.0, 0.4, 60.0), color=(0.45, 0.45, 0.45))) # Peron Kiri
-        add(ColorCube(app, pos=(7.0, 0.2, st_z), scale=(4.0, 0.4, 60.0), color=(0.45, 0.45, 0.45)))  # Peron Kanan
-        
-        # 2. ATAP & TIANG (Sangat tinggi ke atas, Y = 9.0)
-        add(ColorCube(app, pos=(0.0, 9.0, st_z), scale=(20.0, 0.2, 60.0), color=(0.15, 0.25, 0.15))) 
-        
-        for i in range(6):
-            z_light = st_z - 25 + (i * 10)
-            # Tiang digeser lebih jauh ke samping biar lega
-            add(ColorCube(app, pos=(-7.5, 4.6, z_light), scale=(0.4, 9.0, 0.4), color=(0.25, 0.25, 0.25)))
-            add(ColorCube(app, pos=(7.5, 4.6, z_light), scale=(0.4, 9.0, 0.4), color=(0.25, 0.25, 0.25)))
-            
-            # 3. PENCAHAYAAN (Lampu Plafon Kuning Terang)
-            add(ColorCube(app, pos=(0.0, 8.8, z_light), scale=(4.0, 0.2, 4.0), color=(1.0, 1.0, 0.9)))
-            add(ColorCube(app, pos=(-5.0, 8.8, z_light), scale=(2.5, 0.2, 2.5), color=(1.0, 1.0, 0.8)))
-            add(ColorCube(app, pos=(5.0, 8.8, z_light), scale=(2.5, 0.2, 2.5), color=(1.0, 1.0, 0.8)))
+        # Stasiun dibuat kecil dan ringan agar tetap cocok dengan tema desa.
+        # Posisi di ujung jalur rel, tidak mengganggu perlintasan utama.
+        st_z = -105
 
-        # 4. TUGU KERETA TUA (Aman di Peron Kanan)
-        tx, ty, tz = 7.0, 0.4, st_z - 5
-        add(ColorCube(app, pos=(tx, ty+0.3, tz), scale=(4.0, 0.6, 8.0), color=(0.3, 0.3, 0.3))) # Dudukan
-        add(ColorCube(app, pos=(tx, ty+2.0, tz), scale=(2.5, 2.5, 6.0), color=(0.1, 0.1, 0.1))) # Boiler
-        add(ColorCube(app, pos=(tx, ty+3.2, tz+2.0), scale=(2.8, 3.5, 2.5), color=(0.15, 0.1, 0.1))) # Kabin
-        add(ColorCube(app, pos=(tx, ty+4.5, tz-1.5), scale=(0.6, 2.5, 0.6), color=(0.05, 0.05, 0.05))) # Cerobong
-        for rz in [-2.0, 0.0, 2.0]:
-            add(ColorCube(app, pos=(tx-1.4, ty+1.2, tz+rz), scale=(0.2, 2.0, 2.0), color=(0.25, 0.1, 0.1)))
-            add(ColorCube(app, pos=(tx+1.4, ty+1.2, tz+rz), scale=(0.2, 2.0, 2.0), color=(0.25, 0.1, 0.1)))
+        # Peron kiri dan kanan rel
+        # Area tengah X -3 sampai 3 dibiarkan kosong untuk jalur kereta.
+        add(
+            ColorCube(
+                app,
+                pos=(-5.8, 0.18, st_z),
+                scale=(2.4, 0.35, 24.0),
+                color=(0.48, 0.48, 0.46),
+            )
+        )
+        add(
+            ColorCube(
+                app,
+                pos=(5.8, 0.18, st_z),
+                scale=(2.4, 0.35, 24.0),
+                color=(0.48, 0.48, 0.46),
+            )
+        )
+
+        # Garis tepi peron warna kuning
+        add(
+            ColorCube(
+                app,
+                pos=(-3.4, 0.58, st_z),
+                scale=(0.08, 0.04, 23.0),
+                color=(0.95, 0.80, 0.15),
+            )
+        )
+        add(
+            ColorCube(
+                app,
+                pos=(3.4, 0.58, st_z),
+                scale=(0.08, 0.04, 23.0),
+                color=(0.95, 0.80, 0.15),
+            )
+        )
+
+        # Tiang atap stasiun
+        for z_pole in range(st_z - 18, st_z + 19, 9):
+            add(
+                ColorCube(
+                    app,
+                    pos=(-7.2, 2.3, z_pole),
+                    scale=(0.18, 2.2, 0.18),
+                    color=(0.28, 0.28, 0.28),
+                )
+            )
+            add(
+                ColorCube(
+                    app,
+                    pos=(7.2, 2.3, z_pole),
+                    scale=(0.18, 2.2, 0.18),
+                    color=(0.28, 0.28, 0.28),
+                )
+            )
+
+        # Atap stasiun kecil
+        add(
+            ColorCube(
+                app,
+                pos=(0.0, 4.7, st_z),
+                scale=(8.5, 0.18, 24.5),
+                color=(0.20, 0.34, 0.24),
+            )
+        )
+
+        # Bangunan kecil stasiun di sisi kanan
+        add(
+            ColorCube(
+                app,
+                pos=(13.0, 0.55, st_z + 4.0),
+                scale=(2.6, 0.75, 2.0),
+                color=(0.78, 0.70, 0.58),
+            )
+        )
+        add(
+            ColorCube(
+                app,
+                pos=(13.0, 1.45, st_z + 4.0),
+                scale=(2.9, 0.18, 2.3),
+                color=(0.55, 0.20, 0.08),
+            )
+        )
+
+        # Pintu dan jendela bangunan stasiun
+        add(
+            ColorCube(
+                app,
+                pos=(13.0, 0.42, st_z + 6.05),
+                scale=(0.38, 0.48, 0.05),
+                color=(0.24, 0.12, 0.05),
+            )
+        )
+        add(
+            ColorCube(
+                app,
+                pos=(12.1, 0.78, st_z + 6.08),
+                scale=(0.30, 0.25, 0.05),
+                color=(0.08, 0.13, 0.16),
+            )
+        )
+        add(
+            ColorCube(
+                app,
+                pos=(13.9, 0.78, st_z + 6.08),
+                scale=(0.30, 0.25, 0.05),
+                color=(0.08, 0.13, 0.16),
+            )
+        )
+
+        # Papan nama stasiun
+        add(
+            ColorCube(
+                app,
+                pos=(0.0, 2.2, st_z + 20.5),
+                scale=(2.4, 0.35, 0.10),
+                color=(0.95, 0.92, 0.75),
+            )
+        )
+        add(
+            ColorCube(
+                app,
+                pos=(0.0, 2.55, st_z + 20.45),
+                scale=(0.08, 0.50, 0.08),
+                color=(0.20, 0.20, 0.20),
+            )
+        )
+
+        # Bangku tunggu sederhana
+        for bench_z in [st_z - 10, st_z, st_z + 10]:
+            add(
+                ColorCube(
+                    app,
+                    pos=(-6.0, 0.75, bench_z),
+                    scale=(1.2, 0.12, 0.28),
+                    color=(0.38, 0.22, 0.10),
+                )
+            )
+            add(
+                ColorCube(
+                    app,
+                    pos=(6.0, 0.75, bench_z),
+                    scale=(1.2, 0.12, 0.28),
+                    color=(0.38, 0.22, 0.10),
+                )
+            )
+
+        # Lampu kecil stasiun
+        for lamp_z in [st_z - 15, st_z, st_z + 15]:
+            add(
+                ColorCube(
+                    app,
+                    pos=(-7.4, 4.2, lamp_z),
+                    scale=(0.35, 0.08, 0.35),
+                    color=(1.0, 0.95, 0.65),
+                )
+            )
+            add(
+                ColorCube(
+                    app,
+                    pos=(7.4, 4.2, lamp_z),
+                    scale=(0.35, 0.08, 0.35),
+                    color=(1.0, 0.95, 0.65),
+                )
+            )
         
         # 3. KERETA API (THOMAS THE TANK ENGINE & CARRIAGES)
         self.train_parts = []
