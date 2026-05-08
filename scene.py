@@ -219,13 +219,13 @@ class Scene:
         # - Rel kereta        : memanjang arah Z, berada di X sekitar -3 s/d 3
         # - Crossing utama    : pusat map, sekitar X -10 s/d 10 dan Z -10 s/d 10
         #
-        # Zona rural village berdasarkan sketsa:
-        # - Rumah kiri atas   : X -90 s/d -20, Z 20 s/d 90
-        # - Rumah kanan atas  : X 20 s/d 95,  Z 20 s/d 90
-        # - Sawah kiri bawah  : X -95 s/d -25, Z -95 s/d -25
-        # - Kebun kanan bawah : X 25 s/d 65,  Z -95 s/d -25
-        # - Sawah air kanan   : X 70 s/d 95,  Z -95 s/d -35
-        # - Tunnel rel atas   : X -8 s/d 8,   Z 85 s/d 100
+        # Zona rural village berdasarkan tampilan kamera atas:
+        # - Rumah kiri atas   : X -90 s/d -20, Z -90 s/d -20
+        # - Rumah kanan atas  : X 20 s/d 95,  Z -90 s/d -20
+        # - Sawah kiri bawah  : X -95 s/d -25, Z 25 s/d 95
+        # - Kebun kanan bawah : X 25 s/d 65,  Z 25 s/d 95
+        # - Sawah air kanan   : X 70 s/d 95,  Z 35 s/d 95
+        # - Tunnel rel atas   : X -8 s/d 8,   Z -100 s/d -85
         #
         # Zona larangan untuk objek environment:
         # - Jangan taruh pohon/rumah di area rel: X -4 s/d 4
@@ -261,43 +261,43 @@ class Scene:
         LEFT_HOUSE_ZONE = {
             "x_min": -90.0,
             "x_max": -20.0,
-            "z_min": 20.0,
-            "z_max": 90.0,
+            "z_min": -90.0,
+            "z_max": -20.0,
         }
 
         RIGHT_HOUSE_ZONE = {
             "x_min": 20.0,
             "x_max": 95.0,
-            "z_min": 20.0,
-            "z_max": 90.0,
+            "z_min": -90.0,
+            "z_max": -20.0,
         }
 
         LEFT_FARM_ZONE = {
             "x_min": -95.0,
             "x_max": -25.0,
-            "z_min": -95.0,
-            "z_max": -25.0,
+            "z_min": 25.0,
+            "z_max": 95.0,
         }
 
         RIGHT_FARM_ZONE = {
             "x_min": 25.0,
             "x_max": 65.0,
-            "z_min": -95.0,
-            "z_max": -25.0,
+            "z_min": 25.0,
+            "z_max": 95.0,
         }
 
         RIGHT_RICE_PADDY_ZONE = {
             "x_min": 70.0,
             "x_max": 95.0,
-            "z_min": -95.0,
-            "z_max": -35.0,
+            "z_min": 35.0,
+            "z_max": 95.0,
         }
 
         TUNNEL_ZONE = {
             "x_min": -8.0,
             "x_max": 8.0,
-            "z_min": 85.0,
-            "z_max": 100.0,
+            "z_min": -100.0,
+            "z_max": -85.0,
         }
         
         def is_inside_crossing_safe_area(x, z):
@@ -1216,10 +1216,203 @@ class Scene:
         add(ColorCube(app, pos=(12, 4.4, 12), scale=(0.04, 1.0, 0.04), color=(0.1, 0.1, 0.1)))
 
         # 2. LINGKUNGAN DESA BERDASARKAN ACUAN FINAL
-        # Fokus job ini: sawah, rumah, toko, kolam, pagar, pohon, dan jalan tanah.
+        # ==========================================================
+        # 2A. AREA SAWAH / LADANG KIRI BAWAH
+        # ==========================================================
+        # Area ini mengikuti sketsa:
+        # - Berada di kiri bawah map.
+        # - Tidak masuk area jalan raya.
+        # - Tidak masuk area rel.
+        # - Dibuat menjadi 2 petak besar berpagar.
+        #
+        # Koordinat aman:
+        # - X sekitar -90 sampai -30
+        # - Z sekitar -95 sampai -30
+        # ==========================================================
 
-        # POHON AREA DEPAN REL - SESUAI LINGKARAN BIRU ACUAN
-        # Posisi dibuat menjauh dari rel agar tidak menabrak kereta.
+        def add_left_farmland_crop(x, z, height=1.0):
+            # Tanaman kecil untuk ladang kiri bawah.
+            # Dibuat dari batang kubus dan daun piramida agar tetap low-poly.
+            add_box(
+                "left farmland crop stem",
+                x,
+                0.16 * height,
+                z,
+                0.055 * height,
+                0.16 * height,
+                0.055 * height,
+                (0.15, 0.45, 0.10),
+            )
+
+            add(
+                ColorPyramid(
+                    app,
+                    pos=(x, 0.46 * height, z),
+                    scale=(0.22 * height, 0.30 * height, 0.22 * height),
+                    color=(0.10, 0.52, 0.12),
+                )
+            )
+
+        def add_left_farmland_plot(
+            center_x,
+            center_z,
+            half_x,
+            half_z,
+            rows,
+            cols,
+            soil_color,
+            crop_color_variant=0,
+        ):
+            # Petak sawah/kebun kiri bawah.
+            # center_x, center_z = titik tengah petak.
+            # half_x, half_z = setengah ukuran petak.
+            # rows, cols = jumlah baris dan kolom tanaman.
+
+            # Dasar tanah petak.
+            add_box(
+                "left farmland soil base",
+                center_x,
+                -0.085,
+                center_z,
+                half_x,
+                0.025,
+                half_z,
+                soil_color,
+            )
+
+            # Area sedikit lebih gelap di tengah agar terlihat seperti lahan siap tanam.
+            add_box(
+                "left farmland inner soil shade",
+                center_x,
+                -0.052,
+                center_z,
+                half_x - 1.4,
+                0.010,
+                half_z - 1.4,
+                (0.30, 0.21, 0.09),
+            )
+
+            # Pagar keliling petak.
+            # Sedikit dilebihkan supaya pagar tidak menindih tanaman.
+            add_fence_rect(center_x, center_z, half_x + 1.2, half_z + 1.2)
+
+            # Tanaman dibuat grid rapi seperti acuan.
+            # Batas 3 unit dari pinggir agar tidak menabrak pagar.
+            if rows <= 1 or cols <= 1:
+                return
+
+            usable_x = (half_x * 2.0) - 6.0
+            usable_z = (half_z * 2.0) - 6.0
+
+            for r in range(rows):
+                for c in range(cols):
+                    px = center_x - half_x + 3.0 + (c * (usable_x / (cols - 1)))
+                    pz = center_z - half_z + 3.0 + (r * (usable_z / (rows - 1)))
+
+                    # Variasi kecil agar tanaman tidak terlalu kaku.
+                    h = 0.85 + ((r + c) % 3) * 0.08
+
+                    if crop_color_variant == 1:
+                        # Varian tanaman lebih rendah untuk petak bawah.
+                        add_box(
+                            "low vegetable crop",
+                            px,
+                            0.17 * h,
+                            pz,
+                            0.10 * h,
+                            0.17 * h,
+                            0.10 * h,
+                            (0.12, 0.42, 0.10),
+                        )
+                        add_box(
+                            "low vegetable leaf",
+                            px,
+                            0.38 * h,
+                            pz,
+                            0.22 * h,
+                            0.06 * h,
+                            0.22 * h,
+                            (0.13, 0.55, 0.13),
+                        )
+                    else:
+                        add_left_farmland_crop(px, pz, height=h)
+
+        # ----------------------------------------------------------
+        # PETAK LADANG ATAS KIRI BAWAH
+        # ----------------------------------------------------------
+        # Petak ini dibuat lebih besar dan berisi tanaman berbaris.
+        # Posisi tidak terlalu dekat jalan raya, sehingga aman dari kendaraan.
+        add_left_farmland_plot(
+            center_x=-64.0,
+            center_z=47.0,
+            half_x=28.0,
+            half_z=16.0,
+            rows=7,
+            cols=12,
+            soil_color=(0.38, 0.26, 0.11),
+            crop_color_variant=0,
+        )
+
+
+        # ----------------------------------------------------------
+        # PETAK LADANG BAWAH KIRI
+        # ----------------------------------------------------------
+        # Petak bawah dibuat lebih hijau agar tidak monoton.
+        add_left_farmland_plot(
+            center_x=-64.0,
+            center_z=82.0,
+            half_x=28.0,
+            half_z=12.0,
+            rows=5,
+            cols=12,
+            soil_color=(0.28, 0.38, 0.13),
+            crop_color_variant=1,
+        )
+
+        # ----------------------------------------------------------
+        # JALUR TANAH PEMISAH PETAK
+        # ----------------------------------------------------------
+        # Jalur ini berada di antara petak atas dan bawah.
+        # Bentuknya rapi, bukan dirt_patch acak.
+        add_box(
+            "left farmland horizontal dirt divider",
+            -64.0,
+            -0.040,
+            66.5,
+            29.0,
+            0.018,
+            0.70,
+            (0.45, 0.31, 0.13),
+        )
+
+        # Jalur kecil di sisi kanan ladang, mengarah ke jalan raya.
+        add_box(
+            "left farmland side dirt path",
+            -31.5,
+            -0.040,
+            63.0,
+            0.75,
+            0.018,
+            29.0,
+            (0.45, 0.31, 0.13),
+        )
+
+        # ----------------------------------------------------------
+        # POHON CEMARA DI TEPI LADANG KIRI
+        # ----------------------------------------------------------
+        # Pohon ditaruh di tepi luar ladang agar visual lebih hidup,
+        # tetapi tidak masuk ke jalan raya, rel, atau crossing.
+        left_farm_trees = [
+            (-92, 32, 1.10),
+            (-94, 55, 0.95),
+            (-91, 89, 1.20),
+            (-28, 36, 1.05),
+            (-26, 72, 0.90),
+            (-35, 96, 1.15),
+        ]
+
+        for x, z, h in left_farm_trees:
+            add_pine_tree(x, z, height=h)
         
         # ==========================================
         # JALAN TANAH AREA DESA
