@@ -1413,7 +1413,142 @@ class Scene:
 
         for x, z, h in left_farm_trees:
             add_pine_tree(x, z, height=h)
-        
+
+        # ==========================================================
+        # 2B. AREA KEBUN DAN SAWAH AIR KANAN BAWAH
+        # ==========================================================
+        # Area ini mengikuti sketsa bagian kanan bawah:
+        # - X positif karena berada di sisi kanan layar.
+        # - Z positif karena berada di bawah jalan raya pada tampilan kamera atas.
+        # - Berisi kebun kering, sawah air, bunga matahari, pagar, dan pohon tepi.
+        #
+        # Koordinat aman:
+        # - Kebun kanan bawah : X 25 s/d 65, Z 25 s/d 95
+        # - Sawah air kanan   : X 70 s/d 95, Z 35 s/d 95
+        # ==========================================================
+
+        # ----------------------------------------------------------
+        # KEBUN KERING KANAN BAWAH - PETAK ATAS
+        # ----------------------------------------------------------
+        # Petak ini berada di kanan bawah dekat jalan, tetapi tetap aman
+        # karena Z sudah lebih dari 25 dan tidak masuk area jalan raya.
+        add_crop_field(
+            cx=48.0,
+            zc=48.0,
+            sx=18.0,
+            sz=13.0,
+            crop_rows=6,
+            crop_cols=8,
+        )
+
+        # ----------------------------------------------------------
+        # KEBUN KERING KANAN BAWAH - PETAK BAWAH
+        # ----------------------------------------------------------
+        # Petak kedua dibuat tepat di bawah petak atas agar mirip sketsa.
+        add_crop_field(
+            cx=48.0,
+            zc=78.0,
+            sx=18.0,
+            sz=12.0,
+            crop_rows=6,
+            crop_cols=8,
+        )
+
+        # ----------------------------------------------------------
+        # SAWAH AIR KANAN BAWAH - PETAK ATAS
+        # ----------------------------------------------------------
+        # Sawah air dibuat di sisi kanan paling pinggir.
+        # Warna air sudah ditangani oleh helper add_rice_paddy().
+        add_rice_paddy(
+            cx=83.0,
+            zc=48.0,
+            sx=10.5,
+            sz=13.0,
+            rows=7,
+            cols=4,
+        )
+
+        # ----------------------------------------------------------
+        # SAWAH AIR KANAN BAWAH - PETAK BAWAH
+        # ----------------------------------------------------------
+        add_rice_paddy(
+            cx=83.0,
+            zc=80.0,
+            sx=10.5,
+            sz=12.0,
+            rows=7,
+            cols=4,
+        )
+
+        # ----------------------------------------------------------
+        # JALUR TANAH PEMISAH AREA KANAN BAWAH
+        # ----------------------------------------------------------
+        # Jalur vertikal memisahkan kebun kering dan sawah air.
+        add_box(
+            "right farm vertical dirt divider",
+            67.0,
+            -0.040,
+            64.0,
+            0.70,
+            0.018,
+            32.0,
+            (0.45, 0.31, 0.13),
+        )
+
+        # Jalur horizontal memisahkan petak atas dan bawah pada kebun kering.
+        add_box(
+            "right dry field horizontal dirt divider",
+            48.0,
+            -0.040,
+            63.5,
+            18.5,
+            0.018,
+            0.65,
+            (0.45, 0.31, 0.13),
+        )
+
+        # Jalur horizontal memisahkan sawah air atas dan bawah.
+        add_box(
+            "right rice paddy horizontal dirt divider",
+            83.0,
+            -0.040,
+            64.5,
+            10.8,
+            0.018,
+            0.65,
+            (0.45, 0.31, 0.13),
+        )
+
+        # ----------------------------------------------------------
+        # BUNGA MATAHARI DEKAT JALAN
+        # ----------------------------------------------------------
+        # Bunga matahari diletakkan di atas kebun kanan bawah,
+        # dekat jalan raya tetapi tidak masuk area aman jalan.
+        add_sunflower_row(
+            start_x=56.0,
+            z=18.0,
+            count=8,
+            gap=2.6,
+        )
+
+        # ----------------------------------------------------------
+        # POHON CEMARA TEPI KANAN BAWAH
+        # ----------------------------------------------------------
+        # Pohon diletakkan di pinggir map dan antar-petak agar area tidak kosong.
+        # Tidak dibuat terlalu banyak supaya tetap rapi dan tidak berat.
+        right_farm_trees = [
+            (24, 34, 1.05),
+            (24, 70, 0.95),
+            (28, 96, 1.15),
+            (66, 26, 1.05),
+            (96, 36, 1.20),
+            (97, 70, 1.05),
+            (96, 94, 1.15),
+        ]
+
+        for x, z, h in right_farm_trees:
+            add_pine_tree(x, z, height=h)
+
         # ==========================================
         # JALAN TANAH AREA DESA
         # ==========================================
