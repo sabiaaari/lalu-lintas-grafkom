@@ -871,29 +871,342 @@ class Scene:
                 concrete,
             )
 
-        # 1. LINGKUNGAN JALAN, TANAH LUAS & REL PANJANG
-        # Tanah Hijau (Lebar 100, Panjang 100)
-        add(ColorCube(app, pos=(0, -0.25, 0), scale=(100, 0.1, 100), color=(0.34, 0.56, 0.25)))
-        
-        # Jalan Raya (Lebar untuk mobil besar)
-        add(ColorCube(app, pos=(0, -0.1, 0), scale=(100, 0.05, 8.0), color=(0.15, 0.15, 0.15))) 
-        add(ColorCube(app, pos=(0, 0.0, 9.0), scale=(100, 0.1, 1.0), color=(0.6, 0.6, 0.6)))    # Trotoar
-        add(ColorCube(app, pos=(0, 0.0, -9.0), scale=(100, 0.1, 1.0), color=(0.6, 0.6, 0.6)))
+         # ==========================================================
+        # 1. BASE MAP, JALAN RAYA, REL, DAN CROSSING
+        # ==========================================================
+        # Ukuran map mengikuti sketsa:
+        # X = 200 unit, Y = 0.2 unit, Z = 200 unit.
+        #
+        # Karena ColorCube memakai bentuk dasar -1 sampai 1,
+        # scale=(100, 0.1, 100) berarti ukuran aktual:
+        # X = 200, Y = 0.2, Z = 200.
+        #
+        # Layout:
+        # - Jalan raya memanjang arah X di tengah map, Z = 0.
+        # - Rel kereta memanjang arah Z di tengah map, X = 0.
+        # - Crossing berada di pusat map, X sekitar -10 s/d 10 dan Z sekitar -10 s/d 10.
+        # ==========================================================
 
-        # Marka Jalan Putus-putus
-        for x_pos in range(-48, 52, 4):
-            add(ColorCube(app, pos=(x_pos, -0.04, 0), scale=(1.5, 0.01, 0.3), color=(0.9, 0.9, 0.9))) 
+        # ----------------------------------------------------------
+        # TANAH UTAMA 200 x 200 UNIT
+        # ----------------------------------------------------------
+        add_box(
+            "main grass terrain 200x200",
+            0,
+            -0.25,
+            0,
+            100,
+            0.1,
+            100,
+            (0.34, 0.56, 0.25),
+        )
 
-        # --- REL TUNGGAL PANJANG MEMBELAH JALAN (Z = 400) ---
-        add(ColorCube(app, pos=(0, -0.05, 0), scale=(3.5, 0.1, 100), color=(0.35, 0.35, 0.35))) # Kerikil
-        add(ColorCube(app, pos=(-1.5, 0.15, 0), scale=(0.1, 0.1, 100), color=(0.7, 0.7, 0.7))) # Rel Kiri
-        add(ColorCube(app, pos=(1.5, 0.15, 0), scale=(0.1, 0.1, 100), color=(0.7, 0.7, 0.7))) # Rel Kanan
-        
-        # Bantalan Rel Kayu
-        for i in range(-130, 130):
-            z_pos = i * 1.0
-            if abs(z_pos) > 9.0: # Dikosongkan pas di jalan aspal
-                add(ColorCube(app, pos=(0, 0.05, z_pos), scale=(2.2, 0.05, 0.3), color=(0.4, 0.25, 0.1)))
+        # Sisi tebal bawah map agar terlihat seperti miniatur/diorama.
+        add_box(
+            "front terrain side wall",
+            0,
+            -0.62,
+            -100.35,
+            100,
+            0.32,
+            0.35,
+            (0.20, 0.32, 0.12),
+        )
+        add_box(
+            "back terrain side wall",
+            0,
+            -0.62,
+            100.35,
+            100,
+            0.32,
+            0.35,
+            (0.20, 0.32, 0.12),
+        )
+        add_box(
+            "left terrain side wall",
+            -100.35,
+            -0.62,
+            0,
+            0.35,
+            0.32,
+            100,
+            (0.20, 0.32, 0.12),
+        )
+        add_box(
+            "right terrain side wall",
+            100.35,
+            -0.62,
+            0,
+            0.35,
+            0.32,
+            100,
+            (0.20, 0.32, 0.12),
+        )
+
+        # ----------------------------------------------------------
+        # JALAN RAYA UTAMA
+        # ----------------------------------------------------------
+        # Jalan dibuat lebar agar mobil kecil, pickup, dan truk tetap aman.
+        # Jalan memanjang dari X -100 sampai 100.
+        # Lebar jalan aktual sekitar 16 unit karena scale Z = 8.
+        add_box(
+            "main asphalt road",
+            0,
+            -0.09,
+            0,
+            100,
+            0.055,
+            8.0,
+            (0.14, 0.14, 0.14),
+        )
+
+        # Bahu/trotoar tipis sisi atas dan bawah jalan.
+        add_box(
+            "north road shoulder",
+            0,
+            -0.055,
+            8.65,
+            100,
+            0.035,
+            0.45,
+            (0.48, 0.48, 0.46),
+        )
+        add_box(
+            "south road shoulder",
+            0,
+            -0.055,
+            -8.65,
+            100,
+            0.035,
+            0.45,
+            (0.48, 0.48, 0.46),
+        )
+
+        # Garis tepi jalan putih.
+        add_box(
+            "north road white edge line",
+            0,
+            -0.010,
+            7.65,
+            100,
+            0.006,
+            0.045,
+            (0.92, 0.92, 0.88),
+        )
+        add_box(
+            "south road white edge line",
+            0,
+            -0.010,
+            -7.65,
+            100,
+            0.006,
+            0.045,
+            (0.92, 0.92, 0.88),
+        )
+
+        # Marka tengah putus-putus.
+        # Area dekat rel dikosongkan agar crossing tidak terlalu penuh.
+        for x_pos in range(-92, 100, 8):
+            if abs(x_pos) < 8:
+                continue
+
+            add_box(
+                "dashed center road marking",
+                x_pos,
+                -0.005,
+                0,
+                2.0,
+                0.006,
+                0.055,
+                (0.92, 0.92, 0.88),
+            )
+
+        # ----------------------------------------------------------
+        # REL KERETA UTAMA
+        # ----------------------------------------------------------
+        # Rel memanjang arah Z dari -100 sampai 100.
+        # X = 0 adalah tengah jalur rel.
+        # Area kerikil dibuat lebih lebar agar rel terlihat jelas dari kamera atas.
+        add_box(
+            "railway gravel bed",
+            0,
+            -0.040,
+            0,
+            3.2,
+            0.060,
+            100,
+            (0.34, 0.34, 0.32),
+        )
+
+        # Garis tepi kerikil kiri dan kanan, agar jalur rel terlihat punya batas.
+        add_box(
+            "left gravel border",
+            -3.35,
+            0.000,
+            0,
+            0.10,
+            0.035,
+            100,
+            (0.46, 0.46, 0.43),
+        )
+        add_box(
+            "right gravel border",
+            3.35,
+            0.000,
+            0,
+            0.10,
+            0.035,
+            100,
+            (0.46, 0.46, 0.43),
+        )
+
+        # Rel besi kiri dan kanan.
+        # Posisi rel tidak boleh terlalu lebar agar kereta tetap terlihat pas di tengah.
+        add_box(
+            "left steel rail",
+            -1.45,
+            0.145,
+            0,
+            0.08,
+            0.075,
+            100,
+            (0.72, 0.72, 0.70),
+        )
+        add_box(
+            "right steel rail",
+            1.45,
+            0.145,
+            0,
+            0.08,
+            0.075,
+            100,
+            (0.72, 0.72, 0.70),
+        )
+
+        # Bantalan rel kayu.
+        # Bagian yang berpotongan langsung dengan jalan dikosongkan,
+        # karena area crossing akan memakai pelat beton.
+        for z_pos in range(-96, 98, 2):
+            if abs(z_pos) <= 9:
+                continue
+
+            add_box(
+                "wooden railway sleeper",
+                0,
+                0.050,
+                z_pos,
+                2.15,
+                0.045,
+                0.18,
+                (0.36, 0.20, 0.08),
+            )
+
+        # ----------------------------------------------------------
+        # PELAT BETON CROSSING
+        # ----------------------------------------------------------
+        # Pelat beton dibuat di area jalan yang dilintasi rel.
+        # Dibagi 3 bagian agar rel besi tetap terlihat.
+        add_box(
+            "center concrete crossing slab",
+            0,
+            0.018,
+            0,
+            1.05,
+            0.030,
+            4.45,
+            (0.48, 0.48, 0.45),
+        )
+        add_box(
+            "left concrete crossing slab",
+            -2.40,
+            0.010,
+            0,
+            0.55,
+            0.030,
+            4.45,
+            (0.48, 0.48, 0.45),
+        )
+        add_box(
+            "right concrete crossing slab",
+            2.40,
+            0.010,
+            0,
+            0.55,
+            0.030,
+            4.45,
+            (0.48, 0.48, 0.45),
+        )
+
+        # Garis sambungan beton crossing.
+        add_box(
+            "north concrete slab joint line",
+            0,
+            0.055,
+            4.45,
+            3.00,
+            0.006,
+            0.035,
+            (0.24, 0.24, 0.22),
+        )
+        add_box(
+            "south concrete slab joint line",
+            0,
+            0.055,
+            -4.45,
+            3.00,
+            0.006,
+            0.035,
+            (0.24, 0.24, 0.22),
+        )
+
+        # ----------------------------------------------------------
+        # GARIS STOP KENDARAAN DI DEKAT PALANG
+        # ----------------------------------------------------------
+        # Kendaraan dari kiri memakai lajur Z = 4.
+        # Kendaraan dari kanan memakai lajur Z = -4.
+        # Garis stop dibuat sebelum area palang.
+        add_box(
+            "west vehicle stop line before railway gate",
+            -9.50,
+            -0.002,
+            4.0,
+            0.08,
+            0.006,
+            2.20,
+            (0.95, 0.95, 0.92),
+        )
+        add_box(
+            "east vehicle stop line before railway gate",
+            9.50,
+            -0.002,
+            -4.0,
+            0.08,
+            0.006,
+            2.20,
+            (0.95, 0.95, 0.92),
+        )
+
+        # Garis pendek tambahan dekat crossing agar jalan terlihat lebih resmi.
+        add_box(
+            "short north crossing guide line",
+            -6.0,
+            -0.002,
+            4.0,
+            1.00,
+            0.006,
+            0.045,
+            (0.95, 0.95, 0.92),
+        )
+        add_box(
+            "short south crossing guide line",
+            6.0,
+            -0.002,
+            -4.0,
+            1.00,
+            0.006,
+            0.045,
+            (0.95, 0.95, 0.92),
+        )
 
         # Pos Penjaga (Diperbesar Proporsional & Digeser)
         add(ColorCube(app, pos=(12, 0.2, 12), scale=(2.2, 0.2, 2.2), color=(0.5, 0.5, 0.5)))    
@@ -935,13 +1248,6 @@ class Scene:
         for x, z, h in front_rail_trees:
             add_pine_tree(x, z, height=h)
 
-        # Detail tambahan area perlintasan
-        add(ColorCube(app, pos=(-9.5, -0.025, 4.0), scale=(0.10, 0.012, 1.8), color=(1.0, 1.0, 1.0)))
-        add(ColorCube(app, pos=(9.5, -0.025, -4.0), scale=(0.10, 0.012, 1.8), color=(1.0, 1.0, 1.0)))
-
-        # Pelat beton crossing agar jalan-rel terlihat resmi
-        add(ColorCube(app, pos=(0, 0.01, 0), scale=(3.0, 0.035, 4.2), color=(0.46, 0.46, 0.43)))
-        
         # ==========================================
         # STASIUN KECIL PEDESAAN
         # ==========================================
