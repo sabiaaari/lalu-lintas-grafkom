@@ -17,6 +17,9 @@ class VAO:
             "color_pyramid": self.get_vao(
                 self.program.programs["default_color"], self.vbo.vbos["color_pyramid"]
             ),
+            "tex_cube": self.get_vao(
+                self.program.programs["textured"], self.vbo.vbos["tex_cube"]
+            ),
         }
 
     def get_vao(self, program, vbo):

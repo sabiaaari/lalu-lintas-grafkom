@@ -5,6 +5,7 @@ import moderngl as mgl
 from camera import Camera
 from point_light import PointLight
 from mesh import Mesh
+from texture import Texture
 from scene import Scene
 from scene_renderer import SceneRenderer
 
@@ -42,6 +43,7 @@ class SxvxnEngine:
         self.light = PointLight(position=(6.0, 15.0, 6.0), color=(1.0, 1.0, 1.0), intensity=1.2)
         self.camera = Camera(self)
         self.mesh = Mesh(self)
+        self.texture = Texture(self)
         self.scene = Scene(self)
         self.scene_renderer = SceneRenderer(self)
 
@@ -100,6 +102,7 @@ class SxvxnEngine:
 
     def destroy(self):
         self.mesh.destroy()
+        self.texture.destroy()
         self.scene_renderer.destroy()
 
     def run(self):

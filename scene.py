@@ -1,4 +1,4 @@
-from model import ColorCube, ColorPyramid
+from model import ColorCube, ColorPyramid, TexturedCube
 from pyglm import glm
 import math
 import random
@@ -23,84 +23,87 @@ class Vehicle:
         glass_color = (0.9, 0.95, 1.0) 
 
         # --- SETTING UKURAN KENDARAAN (PROPORSIONAL REALISTIS) ---
+        # Diperbesar 1.6x dari ukuran sebelumnya agar lebih presisi dengan lebar jalan
 
         if self.v_type == 0: # SEDAN (Kecil & Ceper)
-            self.length, self.orig_speed, self.safe_distance = 2.5, random.uniform(8, 10), 4.5
-            self.body = ColorCube(app, color=color, scale=(1.2, 0.25, 0.5))
+            self.length, self.orig_speed, self.safe_distance = 4.0, random.uniform(8, 10), 7.0
+            self.body = ColorCube(app, color=color, scale=(1.92, 0.4, 0.8))
             self.body.relative_offset = glm.vec3(0, 0, 0)
-            self.cabin = ColorCube(app, color=glass_color, scale=(0.5, 0.25, 0.45))
-            self.cabin.relative_offset = glm.vec3(0.0, 0.5, 0)
+            self.cabin = ColorCube(app, color=glass_color, scale=(0.8, 0.4, 0.72))
+            self.cabin.relative_offset = glm.vec3(0.0, 0.8, 0)
             self.parts.extend([self.body, self.cabin])
-            w_offs = [glm.vec3(0.7, -0.2, 0.5), glm.vec3(0.7, -0.2, -0.5), glm.vec3(-0.7, -0.2, 0.5), glm.vec3(-0.7, -0.2, -0.5)]
-            w_size = 0.25
+            w_offs = [glm.vec3(1.12, -0.32, 0.8), glm.vec3(1.12, -0.32, -0.8), glm.vec3(-1.12, -0.32, 0.8), glm.vec3(-1.12, -0.32, -0.8)]
+            w_size = 0.4
 
         elif self.v_type == 1: # TRUK BESAR (Raksasa Jalanan)
-            self.length, self.orig_speed, self.safe_distance = 6.0, random.uniform(4, 6), 8.0
-            self.cabin = ColorCube(app, color=color, scale=(1.0, 1.2, 1.1))
-            self.cabin.relative_offset = glm.vec3(2.0, 0.8, 0)
-            self.window = ColorCube(app, color=glass_color, scale=(0.1, 0.5, 1.0))
-            self.window.relative_offset = glm.vec3(3.05, 1.2, 0)
+            self.length, self.orig_speed, self.safe_distance = 9.6, random.uniform(4, 6), 12.8
+            self.cabin = ColorCube(app, color=color, scale=(1.6, 1.92, 1.76))
+            self.cabin.relative_offset = glm.vec3(3.2, 1.28, 0)
+            self.window = ColorCube(app, color=glass_color, scale=(0.16, 0.8, 1.6))
+            self.window.relative_offset = glm.vec3(4.8, 1.92, 0)
             # Bak kargo truk jauh lebih besar dan tinggi
-            self.body = ColorCube(app, color=(0.3, 0.3, 0.3), scale=(3.5, 1.6, 1.2))
-            self.body.relative_offset = glm.vec3(-1.5, 1.2, 0)
+            self.body = ColorCube(app, color=(0.3, 0.3, 0.3), scale=(5.6, 2.56, 1.92))
+            self.body.relative_offset = glm.vec3(-2.4, 1.92, 0)
             self.parts.extend([self.cabin, self.window, self.body])
             # Roda truk lebih banyak dan lebih besar
-            w_offs = [glm.vec3(2.0, -0.2, 1.0), glm.vec3(2.0, -0.2, -1.0), 
-                    glm.vec3(-1.0, -0.2, 1.0), glm.vec3(-1.0, -0.2, -1.0), 
-                    glm.vec3(-2.8, -0.2, 1.0), glm.vec3(-2.8, -0.2, -1.0)]
-            w_size = 0.45 
+            w_offs = [glm.vec3(3.2, -0.32, 1.6), glm.vec3(3.2, -0.32, -1.6), 
+                    glm.vec3(-1.6, -0.32, 1.6), glm.vec3(-1.6, -0.32, -1.6), 
+                    glm.vec3(-4.48, -0.32, 1.6), glm.vec3(-4.48, -0.32, -1.6)]
+            w_size = 0.72 
 
         elif self.v_type == 2: # HATCHBACK (Paling Kecil/Kompak)
-            self.length, self.orig_speed, self.safe_distance = 2.0, random.uniform(8, 10), 4.0
-            self.body = ColorCube(app, color=color, scale=(0.9, 0.25, 0.5))
+            self.length, self.orig_speed, self.safe_distance = 3.2, random.uniform(8, 10), 6.4
+            self.body = ColorCube(app, color=color, scale=(1.44, 0.4, 0.8))
             self.body.relative_offset = glm.vec3(0, 0, 0)
-            self.cabin = ColorCube(app, color=glass_color, scale=(0.4, 0.25, 0.45))
-            self.cabin.relative_offset = glm.vec3(-0.1, 0.5, 0)
+            self.cabin = ColorCube(app, color=glass_color, scale=(0.64, 0.4, 0.72))
+            self.cabin.relative_offset = glm.vec3(-0.16, 0.8, 0)
             self.parts.extend([self.body, self.cabin])
-            w_offs = [glm.vec3(0.5, -0.2, 0.5), glm.vec3(0.5, -0.2, -0.5), glm.vec3(-0.5, -0.2, 0.5), glm.vec3(-0.5, -0.2, -0.5)]
-            w_size = 0.22
+            w_offs = [glm.vec3(0.8, -0.32, 0.8), glm.vec3(0.8, -0.32, -0.8), glm.vec3(-0.8, -0.32, 0.8), glm.vec3(-0.8, -0.32, -0.8)]
+            w_size = 0.35
 
         elif self.v_type == 3: # PICK-UP (Sedang)
-            self.length, self.orig_speed, self.safe_distance = 3.0, random.uniform(6, 8), 5.0
-            self.head = ColorCube(app, color=color, scale=(0.6, 0.5, 0.55))
-            self.head.relative_offset = glm.vec3(0.8, 0.3, 0)
-            self.window = ColorCube(app, color=glass_color, scale=(0.1, 0.3, 0.5))
-            self.window.relative_offset = glm.vec3(1.35, 0.5, 0)
-            self.bak_floor = ColorCube(app, color=(0.2, 0.2, 0.2), scale=(1.2, 0.1, 0.55))
-            self.bak_floor.relative_offset = glm.vec3(-0.6, 0.05, 0)
-            self.wall_l = ColorCube(app, color=color, scale=(1.2, 0.2, 0.05))
-            self.wall_l.relative_offset = glm.vec3(-0.6, 0.3, 0.5)
-            self.wall_r = ColorCube(app, color=color, scale=(1.2, 0.2, 0.05))
-            self.wall_r.relative_offset = glm.vec3(-0.6, 0.3, -0.5)
+            self.length, self.orig_speed, self.safe_distance = 4.8, random.uniform(6, 8), 8.0
+            self.head = ColorCube(app, color=color, scale=(0.96, 0.8, 0.88))
+            self.head.relative_offset = glm.vec3(1.28, 0.48, 0)
+            self.window = ColorCube(app, color=glass_color, scale=(0.16, 0.48, 0.8))
+            self.window.relative_offset = glm.vec3(2.16, 0.8, 0)
+            self.bak_floor = ColorCube(app, color=(0.2, 0.2, 0.2), scale=(1.92, 0.16, 0.88))
+            self.bak_floor.relative_offset = glm.vec3(-0.96, 0.08, 0)
+            self.wall_l = ColorCube(app, color=color, scale=(1.92, 0.32, 0.08))
+            self.wall_l.relative_offset = glm.vec3(-0.96, 0.48, 0.8)
+            self.wall_r = ColorCube(app, color=color, scale=(1.92, 0.32, 0.08))
+            self.wall_r.relative_offset = glm.vec3(-0.96, 0.48, -0.8)
             self.parts.extend([self.head, self.window, self.bak_floor, self.wall_l, self.wall_r])
-            w_offs = [glm.vec3(0.8, -0.2, 0.55), glm.vec3(0.8, -0.2, -0.55), glm.vec3(-0.8, -0.2, 0.55), glm.vec3(-0.8, -0.2, -0.55)]
-            w_size = 0.28
+            w_offs = [glm.vec3(1.28, -0.32, 0.88), glm.vec3(1.28, -0.32, -0.88), glm.vec3(-1.28, -0.32, 0.88), glm.vec3(-1.28, -0.32, -0.88)]
+            w_size = 0.45
 
         elif self.v_type == 4: # MOBIL PEDESAAN (Besar, tapi masih di bawah Truk)
-            self.length, self.orig_speed, self.safe_distance = 3.8, random.uniform(5, 7), 6.0
-            self.body = ColorCube(app, color=color, scale=(1.4, 0.6, 0.65))
-            self.body.relative_offset = glm.vec3(0, 0.5, 0)
-            self.win_l = ColorCube(app, color=glass_color, scale=(0.8, 0.3, 0.01))
-            self.win_l.relative_offset = glm.vec3(-0.1, 1.2, 0.65)
-            self.win_r = ColorCube(app, color=glass_color, scale=(0.8, 0.3, 0.01))
-            self.win_r.relative_offset = glm.vec3(-0.1, 1.2, -0.65)
-            self.roof = ColorCube(app, color=color, scale=(1.0, 0.1, 0.6))
-            self.roof.relative_offset = glm.vec3(-0.1, 1.6, 0)
+            self.length, self.orig_speed, self.safe_distance = 6.08, random.uniform(5, 7), 9.6
+            self.body = ColorCube(app, color=color, scale=(2.24, 0.96, 1.04))
+            self.body.relative_offset = glm.vec3(0, 0.8, 0)
+            self.win_l = ColorCube(app, color=glass_color, scale=(1.28, 0.48, 0.016))
+            self.win_l.relative_offset = glm.vec3(-0.16, 1.92, 1.04)
+            self.win_r = ColorCube(app, color=glass_color, scale=(1.28, 0.48, 0.016))
+            self.win_r.relative_offset = glm.vec3(-0.16, 1.92, -1.04)
+            self.roof = ColorCube(app, color=color, scale=(1.6, 0.16, 0.96))
+            self.roof.relative_offset = glm.vec3(-0.16, 2.56, 0)
             self.parts.extend([self.body, self.win_l, self.win_r, self.roof])
-            w_offs = [glm.vec3(0.9, -0.25, 0.65), glm.vec3(0.9, -0.25, -0.65), glm.vec3(-0.9, -0.25, 0.65), glm.vec3(-0.9, -0.25, -0.65)]
-            w_size = 0.32
+            w_offs = [glm.vec3(1.44, -0.4, 1.04), glm.vec3(1.44, -0.4, -1.04), glm.vec3(-1.44, -0.4, 1.04), glm.vec3(-1.44, -0.4, -1.04)]
+            w_size = 0.51
 
         # --- PEMBUATAN RODA SEGI-8 (OKTAGON) ---
+        w_thick = 0.24
         for off in w_offs:
             # Kubus 1 (Lurus)
-            w1 = ColorCube(app, color=(0.15, 0.15, 0.15), scale=(w_size, w_size, 0.15))
+            w1 = ColorCube(app, color=(0.15, 0.15, 0.15), scale=(w_size, w_size, w_thick))
             w1.relative_offset = off
             w1.base_rot = 0.0
             
             # Kubus 2 (Miring 45 derajat)
-            w2 = ColorCube(app, color=(0.15, 0.15, 0.15), scale=(w_size, w_size, 0.15))
+            w2 = ColorCube(app, color=(0.15, 0.15, 0.15), scale=(w_size, w_size, w_thick))
             w2.relative_offset = off
             w2.base_rot = 0.785398
+
             
             self.wheels.extend([w1, w2])
             
@@ -164,6 +167,82 @@ class SmokeParticle:
         s = self.base_scale * (progress * 3.0) 
         self.cube.scale = glm.vec3(s, s, s)
         self.cube.m_model = self.cube.get_model_matrix()
+
+class GradeCrossingSignal:
+    def __init__(self, scene, pos, rotation_y, gate_pivot_side):
+        self.scene, self.app, self.pos = scene, scene.app, glm.vec3(pos)
+        self.rotation_y, self.gate_pivot_side = rotation_y, gate_pivot_side
+        self.parts, self.mast_lights, self.arm_lights = [], [], []        
+
+        # 1. Concrete Base
+        self.parts.append(ColorCube(self.app, pos=self.pos + glm.vec3(0, 0.1, 0), scale=(0.5, 0.1, 0.5), color=(0.5, 0.5, 0.5)))
+
+        # 2. Main Mast
+        self.parts.append(TexturedCube(self.app, pos=self.pos + glm.vec3(0, 1.5, 0), scale=(0.15, 1.5, 0.15), texture_id=0, uv_offset=(0, 0), uv_scale=(1, 0.5)))
+
+        # 3. Gate Mechanism Box
+        self.parts.append(ColorCube(self.app, pos=self.pos + glm.vec3(0, 1.0, 0), scale=(0.25, 0.25, 0.25), color=(0.1, 0.1, 0.1)))
+
+        # 4. Barrier Gate Arm
+        self.gate_arm = TexturedCube(self.app, pos=self.pos + glm.vec3(0, 1.0, 0), scale=(0.1, 0.1, 9.0), texture_id=0, uv_offset=(0, 0), uv_scale=(1, 0.5))
+        self.gate_arm.pivot_offset = glm.vec3(0, 0, gate_pivot_side * 9.0)
+        self.parts.append(self.gate_arm)
+
+        # 5. Crossbuck blades (Detailed, facing traffic)
+        # Use yaw = rotation_y + 90 to face traffic. Offset slightly to avoid mast overlap.
+        cb_yaw = rotation_y + 90
+        offset_dir = glm.vec3(math.sin(glm.radians(rotation_y)), 0, math.cos(glm.radians(rotation_y)))
+        cb_pos = self.pos + glm.vec3(0, 2.8, 0) + offset_dir * 0.22       
+        # Crossbuck size 4-5x wider than mast (mast diam=0.3, width=1.5 is 5x)
+        cb1 = TexturedCube(self.app, pos=cb_pos, scale=(1.5, 0.25, 0.05), rot=(0, cb_yaw, 45), texture_id=0, uv_offset=(0, 0.5), uv_scale=(1, 0.5)) 
+        cb2 = TexturedCube(self.app, pos=cb_pos, scale=(1.5, 0.25, 0.05), rot=(0, cb_yaw, -45), texture_id=0, uv_offset=(0, 0.5), uv_scale=(1, 0.5))
+        self.parts.extend([cb1, cb2])
+
+        # 6. Lights Housing & Main Warning Lights (Facing traffic)        
+        housing_pos = self.pos + glm.vec3(0, 2.1, 0) + offset_dir * 0.22  
+        housing = ColorCube(self.app, pos=housing_pos, scale=(1.0, 0.2, 0.1), rot=(0, cb_yaw, 0), color=(0.1, 0.1, 0.1))
+        self.parts.append(housing)
+
+        # Place large red circles/boxes on housing
+        side_dir = glm.vec3(math.sin(glm.radians(cb_yaw)), 0, math.cos(glm.radians(cb_yaw)))
+        for side in [-1, 1]:
+            lp = housing_pos + side_dir * (side * 0.7) + offset_dir * 0.12
+            l = ColorCube(self.app, pos=lp, scale=(0.35, 0.35, 0.05), rot=(0, cb_yaw, 0), color=(0.4, 0, 0))
+            self.mast_lights.append(l); self.parts.append(l)
+
+        # 7. Gray Bell Cap
+        self.parts.append(ColorCube(self.app, pos=self.pos + glm.vec3(0, 3.2, 0), scale=(0.2, 0.15, 0.2), color=(0.4, 0.4, 0.4)))
+
+        # Add 3 sequential arm lights (Near hinge, middle, tip)
+        for i in range(3):
+            al = ColorCube(self.app, scale=(0.12, 0.12, 0.12), rot=(0, cb_yaw, 0), color=(0.4, 0, 0))
+            self.arm_lights.append(al); self.parts.append(al)
+
+        for p in self.parts: scene.add_object(p)
+
+    def update(self, gate_angle, emissive_val):
+        angle_rad = glm.radians(gate_angle)
+        self.gate_arm.rot.x = -angle_rad if self.gate_pivot_side > 0 else angle_rad
+        self.gate_arm.m_model = self.gate_arm.get_model_matrix()
+
+        # Update Arm Lights world position
+        arm_model = self.gate_arm.m_model
+        # Local Z offsets for serial lights (gate is 18 units long, local Z is -9 to 9)
+        # Hinge is at -9 if side=-1, or 9 if side=1.
+        light_local_zs = [7.0, 0, -8.0] if self.gate_pivot_side > 0 else [-7.0, 0, 8.0]
+        for i, lz in enumerate(light_local_zs):
+            # Calculate world position based on arm matrix
+            pos_w = arm_model * glm.vec4(0, 0.2, lz, 1.0) # slightly above arm (Y+0.2 local)
+            self.arm_lights[i].pos = glm.vec3(pos_w)
+            # Match pitch of the arm, maintain yaw facing traffic
+            self.arm_lights[i].rot.x = self.gate_arm.rot.x
+            self.arm_lights[i].emissive = glm.vec3(emissive_val, 0, 0)    
+            self.arm_lights[i].m_model = self.arm_lights[i].get_model_matrix()
+
+        light_emissive = glm.vec3(emissive_val, 0.0, 0.0)
+        for l in self.mast_lights: l.emissive = light_emissive
+
+
 
 class Scene:
     def __init__(self, app):
@@ -2381,33 +2460,13 @@ class Scene:
                     self.train_wheels.append((w2, total_z, 0.785398))
                     add(w2)
                     
-        # 4. PALANG PINTU (Disesuaikan jalan lebar)
-        self.gates = []
-        self.signal_lights = []
-
-        # Utara
-        add(ColorCube(app, pos=(-8, 0.8, -10), scale=(0.25, 1.5, 0.25), color=(0.2, 0.2, 0.2)))
-        add(ColorCube(app, pos=(-8, 2.8, -10), scale=(1.2, 0.15, 0.2), rot=(0, 0, 45), color=(0.9, 0.9, 0.9)))
-        add(ColorCube(app, pos=(-8, 2.8, -10), scale=(1.2, 0.15, 0.2), rot=(0, 0, -45), color=(0.9, 0.9, 0.9)))
-        gate_n = ColorCube(app, pos=(-8, 1.5, -10), scale=(0.1, 0.1, 9.0), color=(0.8, 0.1, 0.1))
-        gate_n.pivot_offset = glm.vec3(0, 0, 9.0)
-        self.gates.append(gate_n)
-        add(gate_n)
-        light_n = ColorCube(app, pos=(-8, 2.0, -10), scale=(0.25, 0.25, 0.25), color=(0.4, 0, 0))
-        self.signal_lights.append(light_n)
-        add(light_n)
-
-        # Selatan
-        add(ColorCube(app, pos=(8, 0.8, 10), scale=(0.25, 1.5, 0.25), color=(0.2, 0.2, 0.2)))
-        add(ColorCube(app, pos=(8, 2.8, 10), scale=(1.2, 0.15, 0.2), rot=(0, 0, 45), color=(0.9, 0.9, 0.9)))
-        add(ColorCube(app, pos=(8, 2.8, 10), scale=(1.2, 0.15, 0.2), rot=(0, 0, -45), color=(0.9, 0.9, 0.9)))
-        gate_s = ColorCube(app, pos=(8, 1.5, 10), scale=(0.1, 0.1, 9.0), color=(0.8, 0.1, 0.1))
-        gate_s.pivot_offset = glm.vec3(0, 0, -9.0)
-        self.gates.append(gate_s)
-        add(gate_s)
-        light_s = ColorCube(app, pos=(8, 2.0, 10), scale=(0.25, 0.25, 0.25), color=(0.4, 0, 0))
-        self.signal_lights.append(light_s)
-        add(light_s)
+        # 4. NEW CROSSING SIGNALS
+        self.crossing_signals = []
+        # Signal 1: Foreground-Right (warns X+ traffic, faces X-)
+        sig1 = GradeCrossingSignal(self, pos=(8, 0, 10), rotation_y=0, gate_pivot_side=-1)
+        # Signal 2: Background-Left (warns X- traffic, faces X+)
+        sig2 = GradeCrossingSignal(self, pos=(-8, 0, -10), rotation_y=180, gate_pivot_side=1)
+        self.crossing_signals.extend([sig1, sig2])
 
         # 5. OBJECT POOL KENDARAAN
         for _ in range(self.max_pool):
@@ -2427,18 +2486,21 @@ class Scene:
             add(smoke.cube)
 
     def _spawn_vehicle(self, direction):
-        spawn_x = -48.0 if direction == 1 else 48.0
+        # Batas fisik jalan adalah 100 unit (scale=100).
+        # Spawn di luar batas visual (-105/105) agar masuk dengan smooth.
+        spawn_x = -105.0 if direction == 1 else 105.0
         for v in self.vehicles_pool:
             if v.active and v.direction == direction:
-                if abs(v.pos.x - spawn_x) < 8.0:
+                # Cek jarak aman agar tidak menumpuk saat spawn baru
+                if abs(v.pos.x - spawn_x) < 12.0:
                     return 
                     
         for car in self.vehicles_pool:
             if not car.active:
                 car.active = True
                 car.direction = direction
-                car.pos.y = 0.8  # Dinaikkan agar ban tidak tenggelam ke aspal
-                car.pos.z = 4.0 if direction == 1 else -4.0 # Lajur digeser lebih lebar
+                car.pos.y = 0.8  
+                car.pos.z = 4.0 if direction == 1 else -4.0 
                 car.pos.x = spawn_x
                 car.current_speed = car.orig_speed * direction
                 self.active_count += 1
@@ -2517,8 +2579,11 @@ class Scene:
 
                 car.pos.x += car.current_speed * dt
                 
-                if lane_dir == 1 and car.pos.x > 50: car.pos.x = -50
-                if lane_dir == -1 and car.pos.x < -50: car.pos.x = 50
+                # PERBAIKAN BUG VANISHING:
+                # Road boundary adalah 100. Gunakan 110 agar mobil benar-benar keluar dari pandangan 
+                # (termasuk panjang bodi mobil) sebelum di-reset ke ujung lainnya.
+                if lane_dir == 1 and car.pos.x > 110.0: car.pos.x = -110.0
+                if lane_dir == -1 and car.pos.x < -110.0: car.pos.x = 110.0
 
         # --- FSM PALANG & KERETA (UPDATE JEDA LEBIH CEPAT) ---
         if self.state == 'IDLE':
@@ -2566,14 +2631,9 @@ class Scene:
 
         # Lampu Sinyal
         pulse = (math.sin(self.app.time * 15) + 1) * 0.5 if self.state != 'IDLE' else 0.0
-        light_color = glm.vec3(0.4 + 0.6 * pulse, 0.0, 0.0)
-        for light in self.signal_lights:
-            light.color = light_color
-
-        for i, gate in enumerate(self.gates):
-            angle_rad = glm.radians(self.gate_angle)
-            gate.rot.x = -angle_rad if i == 0 else angle_rad
-            gate.m_model = gate.get_model_matrix()
+        ev = 0.4 + 0.6 * pulse
+        for sig in self.crossing_signals:
+            sig.update(self.gate_angle, ev)
 
         for obj in self.objects:
             obj.update()

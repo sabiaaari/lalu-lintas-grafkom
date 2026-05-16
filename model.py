@@ -1,7 +1,7 @@
 from pyglm import glm
 
 class BaseModelColor:
-    def __init__(self, app, vao_name, pos=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1), color=(1.0, 1.0, 1.0)):
+    def __init__(self, app, vao_name, pos=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1), color=(1.0, 1.0, 1.0), emissive=(0, 0, 0)):
         self.app = app
         self.camera = app.camera
         self.light = app.light
@@ -13,6 +13,7 @@ class BaseModelColor:
         self.rot = glm.vec3([glm.radians(a) for a in rot])
         self.scale = glm.vec3(scale)
         self.color = glm.vec3(color)
+        self.emissive = glm.vec3(emissive)
         
         # Pivot offset untuk rotasi engsel
         self.pivot_offset = glm.vec3(0, 0, 0)
@@ -49,6 +50,8 @@ class BaseModelColor:
         self.program['m_model'].write(self.m_model)
         self.program['cam_pos'].write(self.camera.position)
         self.program['u_color'].write(self.color)
+        if 'u_emissive' in self.program:
+            self.program['u_emissive'].write(self.emissive)
 
     def render(self):
         self.update()
@@ -69,3 +72,32 @@ class ColorPyramid(BaseModelColor):
         color=(1.0, 1.0, 1.0)
     ):
         super().__init__(app, vao_name, pos, rot, scale, color)
+
+class TexturedCube(BaseModelColor):
+    def __init__(self, app, vao_name='tex_cube', pos=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1),
+                 texture_id=0, emissive=(0, 0, 0), uv_offset=(0, 0), uv_scale=(1, 1)):
+        super().__init__(app, vao_name, pos, rot, scale)
+        self.texture_id = texture_id
+        self.emissive = glm.vec3(emissive)
+        self.uv_offset = glm.vec2(uv_offset)
+        self.uv_scale = glm.vec2(uv_scale)
+        self.on_init()
+
+    def update(self):
+        self.texture = self.app.texture.textures[self.texture_id]
+        self.program['u_texture'] = 0
+        self.texture.use(location=0)
+        
+        self.program['u_use_texture'] = 1.0
+        self.program['u_emissive'].write(self.emissive)
+        self.program['u_uv_offset'].write(self.uv_offset)
+        self.program['u_uv_scale'].write(self.uv_scale)
+        
+        self.program['m_view'].write(self.camera.m_view)
+        self.program['m_model'].write(self.m_model)
+        self.program['cam_pos'].write(self.camera.position)
+
+    def on_init(self):
+        super().on_init()
+        # Textured program needs texture uniform set once or every frame
+        self.program['u_texture'] = 0
