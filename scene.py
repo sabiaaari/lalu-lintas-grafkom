@@ -35,21 +35,23 @@ class Vehicle:
             w_offs = [glm.vec3(1.12, -0.32, 0.8), glm.vec3(1.12, -0.32, -0.8), glm.vec3(-1.12, -0.32, 0.8), glm.vec3(-1.12, -0.32, -0.8)]
             w_size = 0.4
 
-        elif self.v_type == 1: # TRUK BESAR (Raksasa Jalanan)
-            self.length, self.orig_speed, self.safe_distance = 9.6, random.uniform(4, 6), 12.8
-            self.cabin = ColorCube(app, color=color, scale=(1.6, 1.92, 1.76))
-            self.cabin.relative_offset = glm.vec3(3.2, 1.28, 0)
-            self.window = ColorCube(app, color=glass_color, scale=(0.16, 0.8, 1.6))
-            self.window.relative_offset = glm.vec3(4.8, 1.92, 0)
-            # Bak kargo truk jauh lebih besar dan tinggi
-            self.body = ColorCube(app, color=(0.3, 0.3, 0.3), scale=(5.6, 2.56, 1.92))
-            self.body.relative_offset = glm.vec3(-2.4, 1.92, 0)
+        elif self.v_type == 1: # TRUK BESAR (Ukurannya diperkecil sedikit agar presisi)
+            ts = 0.65 # multiplier untuk truk
+            self.length, self.orig_speed, self.safe_distance = 9.6 * ts, random.uniform(4, 6), 12.8 * ts
+            self.cabin = ColorCube(app, color=color, scale=(1.6*ts, 1.92*ts, 1.76*ts))
+            self.cabin.relative_offset = glm.vec3(3.2*ts, 1.28*ts, 0)
+            self.window = ColorCube(app, color=glass_color, scale=(0.16*ts, 0.8*ts, 1.6*ts))
+            self.window.relative_offset = glm.vec3(4.8*ts, 1.92*ts, 0)
+            # Bak kargo truk
+            self.body = ColorCube(app, color=(0.3, 0.3, 0.3), scale=(5.6*ts, 2.56*ts, 1.92*ts))
+            self.body.relative_offset = glm.vec3(-2.4*ts, 1.92*ts, 0)
             self.parts.extend([self.cabin, self.window, self.body])
-            # Roda truk lebih banyak dan lebih besar
-            w_offs = [glm.vec3(3.2, -0.32, 1.6), glm.vec3(3.2, -0.32, -1.6), 
-                    glm.vec3(-1.6, -0.32, 1.6), glm.vec3(-1.6, -0.32, -1.6), 
-                    glm.vec3(-4.48, -0.32, 1.6), glm.vec3(-4.48, -0.32, -1.6)]
-            w_size = 0.72 
+            # Roda truk
+            # Y-offset roda tidak dikali ts agar roda tetap menapak tanah
+            w_offs = [glm.vec3(3.2*ts, -0.32, 1.6*ts), glm.vec3(3.2*ts, -0.32, -1.6*ts), 
+                    glm.vec3(-1.6*ts, -0.32, 1.6*ts), glm.vec3(-1.6*ts, -0.32, -1.6*ts), 
+                    glm.vec3(-4.48*ts, -0.32, 1.6*ts), glm.vec3(-4.48*ts, -0.32, -1.6*ts)]
+            w_size = 0.72 * ts
 
         elif self.v_type == 2: # HATCHBACK (Paling Kecil/Kompak)
             self.length, self.orig_speed, self.safe_distance = 3.2, random.uniform(8, 10), 6.4
@@ -91,8 +93,19 @@ class Vehicle:
             w_offs = [glm.vec3(1.44, -0.4, 1.04), glm.vec3(1.44, -0.4, -1.04), glm.vec3(-1.44, -0.4, 1.04), glm.vec3(-1.44, -0.4, -1.04)]
             w_size = 0.51
 
-        # --- PEMBUATAN RODA SEGI-8 (OKTAGON) ---
+        # --- SCALE KENDARAAN (DIPERBESAR) ---
+        vs = 1.5
         w_thick = 0.24
+        self.length *= vs
+        self.safe_distance *= vs
+        for part in self.parts:
+            part.scale = part.scale * vs
+            part.relative_offset = part.relative_offset * vs
+        w_size *= vs
+        w_thick *= vs
+        w_offs = [off * vs for off in w_offs]
+
+        # --- PEMBUATAN RODA SEGI-8 (OKTAGON) ---
         for off in w_offs:
             # Kubus 1 (Lurus)
             w1 = ColorCube(app, color=(0.15, 0.15, 0.15), scale=(w_size, w_size, w_thick))
@@ -113,6 +126,36 @@ class Vehicle:
     def update(self):
         if not self.active: return
         dt = self.app.delta_time
+
+        # --- DYNAMIC ACCELERATION (PERCEPATAN DARURAT) ---
+        # Danger Zone: Area rel (X antara -6.5 sampai 6.5)
+        is_in_danger_zone = -6.5 < self.pos.x < 6.5
+        
+        # Cek status palang/kereta secara defensive dari scene
+        scene = getattr(self.app, 'scene', None)
+        if scene:
+            state = getattr(scene, 'state', 'IDLE')
+            # Jika palang sedang menutup atau kereta sedang lewat perlintasan
+            is_gate_closing = state in ['CLOSING', 'TRAIN_CROSSING']
+            
+            if is_in_danger_zone and is_gate_closing:
+                # Lipat gandakan kecepatan agar segera keluar dari rel (Panic Acceleration)
+                self.current_speed = self.orig_speed * self.direction * 2.5
+            elif not is_in_danger_zone:
+                # Normalisasi: Jika sudah keluar dari Danger Zone, biarkan sistem kontrol speed 
+                # di Scene.update mengambil alih kembali secara bertahap.
+                # Kita hanya reset jika speed saat ini masih di atas batas normal.
+                if abs(self.current_speed) > abs(self.orig_speed) * 1.5:
+                    self.current_speed = self.orig_speed * self.direction
+
+        # Update Posisi Kendaraan
+        self.pos.x += self.current_speed * dt
+        
+        # Batas reset kendaraan agar tetap di dalam map (X = +/- 100)
+        if self.direction == 1 and self.pos.x > 100.0: self.pos.x = -100.0
+        if self.direction == -1 and self.pos.x < -100.0: self.pos.x = 100.0
+
+        # Update Animasi Roda dan Komponen
         self.wheel_rot += abs(self.current_speed) * dt * 6.0
         
         for part in self.parts:
@@ -255,8 +298,8 @@ class Scene:
         
         
         # Pengaturan Kereta 
-        self.TRAIN_START_Z = 100.0
-        self.TRAIN_END_Z = -150.0
+        self.TRAIN_START_Z = 78.0
+        self.TRAIN_END_Z = -95.0
         self.train_z = self.TRAIN_START_Z
         self.train_speed = 7.0
         
@@ -456,6 +499,7 @@ class Scene:
             # Dibuat dari batang kubus dan 3 tumpuk daun piramida.
             # Cocok untuk area desa dan pinggir rel, tetapi tidak boleh
             # masuk jalur rel/jalan/crossing.
+            height *= 1.5  # Skala pohon diperbesar
             if check_safe and not is_safe_environment_position(x, z):
                 return
 
@@ -524,6 +568,9 @@ class Scene:
         def add_fence_line(x1, z1, x2, z2, post_gap=4.0):
             # Membuat pagar lurus dari titik awal ke titik akhir.
             # Pagar terdiri dari tiang vertikal dan dua bilah horizontal.
+            fs = 1.5 # Skala pagar diperbesar
+            post_gap *= fs
+            
             fence_post_color = (0.30, 0.16, 0.06)
             fence_rail_color = (0.42, 0.22, 0.08)
 
@@ -546,11 +593,11 @@ class Scene:
                 add_box(
                     "fence post",
                     px,
-                    0.55,
+                    0.55 * fs,
                     pz,
-                    0.12,
-                    0.55,
-                    0.12,
+                    0.12 * fs,
+                    0.55 * fs,
+                    0.12 * fs,
                     fence_post_color,
                 )
 
@@ -561,10 +608,10 @@ class Scene:
             add_box(
                 "upper fence rail",
                 mid_x,
-                0.75,
+                0.75 * fs,
                 mid_z,
-                0.08,
-                0.08,
+                0.08 * fs,
+                0.08 * fs,
                 length * 0.5,
                 fence_rail_color,
                 rot=(0, angle_y, 0),
@@ -572,10 +619,10 @@ class Scene:
             add_box(
                 "lower fence rail",
                 mid_x,
-                0.38,
+                0.38 * fs,
                 mid_z,
-                0.07,
-                0.07,
+                0.07 * fs,
+                0.07 * fs,
                 length * 0.5,
                 fence_rail_color,
                 rot=(0, angle_y, 0),
@@ -598,6 +645,7 @@ class Scene:
         def add_house(x, z, roof_color=(0.75, 0.18, 0.08), body_color=(0.72, 0.64, 0.45), scale=1.0):
             # Rumah desa sederhana.
             # Terdiri dari pondasi, badan rumah, atap, pintu, dan jendela.
+            scale *= 1.5 # Skala rumah diperbesar
             if not is_safe_environment_position(x, z):
                 return
 
@@ -694,6 +742,7 @@ class Scene:
             # Rumah desa dengan arah pintu bisa diatur.
             # front_dir = 1  berarti pintu menghadap Z positif / arah jalan raya untuk area atas.
             # front_dir = -1 berarti pintu menghadap Z negatif / arah jalan raya untuk area bawah.
+            scale *= 1.5 # Skala rumah diperbesar
             if not is_safe_environment_position(x, z):
                 return
 
@@ -786,6 +835,7 @@ class Scene:
 
         def add_small_shed(x, z, roof_color=(0.65, 0.25, 0.10), scale=1.0):
             # Gubuk kecil/pos kecil untuk detail area desa.
+            scale *= 1.5 # Skala gubuk diperbesar
             if not is_safe_environment_position(x, z):
                 return
 
@@ -995,10 +1045,10 @@ class Scene:
             add_box(
                 "tunnel left wall",
                 x - 4.0,
-                2.0,
+                3.0,
                 z,
                 1.2,
-                2.2,
+                3.3,
                 4.5,
                 concrete,
             )
@@ -1007,10 +1057,10 @@ class Scene:
             add_box(
                 "tunnel right wall",
                 x + 4.0,
-                2.0,
+                3.0,
                 z,
                 1.2,
-                2.2,
+                3.3,
                 4.5,
                 concrete,
             )
@@ -1019,10 +1069,10 @@ class Scene:
             add_box(
                 "tunnel top block",
                 x,
-                4.3,
+                6.45,
                 z,
                 5.2,
-                1.0,
+                1.5,
                 4.5,
                 concrete,
             )
@@ -1031,10 +1081,10 @@ class Scene:
             add_box(
                 "tunnel dark opening",
                 x,
-                2.0,
+                3.0,
                 z + 4.55,
                 2.6,
-                1.9,
+                2.85,
                 0.10,
                 dark_opening,
             )
@@ -1043,10 +1093,10 @@ class Scene:
             add_box(
                 "tunnel front cap",
                 x,
-                4.9,
+                7.35,
                 z - 4.7,
                 5.6,
-                0.35,
+                0.525,
                 0.25,
                 concrete,
             )
@@ -1068,16 +1118,16 @@ class Scene:
         # ==========================================================
 
         # ----------------------------------------------------------
-        # TANAH UTAMA 200 x 200 UNIT
+        # TANAH UTAMA 200 x 200 UNIT (DIPERLUAS MENJADI 200 x 230 UNIT)
         # ----------------------------------------------------------
         add_box(
-            "main grass terrain 200x200",
+            "main grass terrain",
             0,
             -0.25,
             0,
             100,
             0.1,
-            100,
+            115,
             (0.34, 0.56, 0.25),
         )
 
@@ -1086,7 +1136,7 @@ class Scene:
             "front terrain side wall",
             0,
             -0.62,
-            -100.35,
+            -115.35,
             100,
             0.32,
             0.35,
@@ -1096,7 +1146,7 @@ class Scene:
             "back terrain side wall",
             0,
             -0.62,
-            100.35,
+            115.35,
             100,
             0.32,
             0.35,
@@ -1109,7 +1159,7 @@ class Scene:
             0,
             0.35,
             0.32,
-            100,
+            115,
             (0.20, 0.32, 0.12),
         )
         add_box(
@@ -1119,7 +1169,7 @@ class Scene:
             0,
             0.35,
             0.32,
-            100,
+            115,
             (0.20, 0.32, 0.12),
         )
 
@@ -2232,16 +2282,16 @@ class Scene:
             add(
                 ColorCube(
                     app,
-                    pos=(-7.2, 2.3, z_pole),
-                    scale=(0.18, 2.2, 0.18),
+                    pos=(-7.2, 3.45, z_pole),
+                    scale=(0.18, 3.3, 0.18),
                     color=(0.28, 0.28, 0.28),
                 )
             )
             add(
                 ColorCube(
                     app,
-                    pos=(7.2, 2.3, z_pole),
-                    scale=(0.18, 2.2, 0.18),
+                    pos=(7.2, 3.45, z_pole),
+                    scale=(0.18, 3.3, 0.18),
                     color=(0.28, 0.28, 0.28),
                 )
             )
@@ -2250,7 +2300,7 @@ class Scene:
         add(
             ColorCube(
                 app,
-                pos=(0.0, 4.7, st_z),
+                pos=(0.0, 7.05, st_z),
                 scale=(8.5, 0.18, 24.5),
                 color=(0.20, 0.34, 0.24),
             )
@@ -2260,15 +2310,15 @@ class Scene:
         add(
             ColorCube(
                 app,
-                pos=(13.0, 0.55, st_z + 4.0),
-                scale=(2.6, 0.75, 2.0),
+                pos=(13.0, 0.825, st_z + 4.0),
+                scale=(2.6, 1.125, 2.0),
                 color=(0.78, 0.70, 0.58),
             )
         )
         add(
             ColorCube(
                 app,
-                pos=(13.0, 1.45, st_z + 4.0),
+                pos=(13.0, 2.175, st_z + 4.0),
                 scale=(2.9, 0.18, 2.3),
                 color=(0.55, 0.20, 0.08),
             )
@@ -2278,24 +2328,24 @@ class Scene:
         add(
             ColorCube(
                 app,
-                pos=(13.0, 0.42, st_z + 6.05),
-                scale=(0.38, 0.48, 0.05),
+                pos=(13.0, 0.63, st_z + 6.05),
+                scale=(0.38, 0.72, 0.05),
                 color=(0.24, 0.12, 0.05),
             )
         )
         add(
             ColorCube(
                 app,
-                pos=(12.1, 0.78, st_z + 6.08),
-                scale=(0.30, 0.25, 0.05),
+                pos=(12.1, 1.17, st_z + 6.08),
+                scale=(0.30, 0.375, 0.05),
                 color=(0.08, 0.13, 0.16),
             )
         )
         add(
             ColorCube(
                 app,
-                pos=(13.9, 0.78, st_z + 6.08),
-                scale=(0.30, 0.25, 0.05),
+                pos=(13.9, 1.17, st_z + 6.08),
+                scale=(0.30, 0.375, 0.05),
                 color=(0.08, 0.13, 0.16),
             )
         )
@@ -2304,16 +2354,16 @@ class Scene:
         add(
             ColorCube(
                 app,
-                pos=(0.0, 2.2, st_z + 20.5),
-                scale=(2.4, 0.35, 0.10),
+                pos=(0.0, 3.3, st_z + 20.5),
+                scale=(2.4, 0.525, 0.10),
                 color=(0.95, 0.92, 0.75),
             )
         )
         add(
             ColorCube(
                 app,
-                pos=(0.0, 2.55, st_z + 20.45),
-                scale=(0.08, 0.50, 0.08),
+                pos=(0.0, 3.825, st_z + 20.45),
+                scale=(0.08, 0.75, 0.08),
                 color=(0.20, 0.20, 0.20),
             )
         )
@@ -2342,7 +2392,7 @@ class Scene:
             add(
                 ColorCube(
                     app,
-                    pos=(-7.4, 4.2, lamp_z),
+                    pos=(-7.4, 6.3, lamp_z),
                     scale=(0.35, 0.08, 0.35),
                     color=(1.0, 0.95, 0.65),
                 )
@@ -2350,115 +2400,234 @@ class Scene:
             add(
                 ColorCube(
                     app,
-                    pos=(7.4, 4.2, lamp_z),
+                    pos=(7.4, 6.3, lamp_z),
                     scale=(0.35, 0.08, 0.35),
                     color=(1.0, 0.95, 0.65),
                 )
             )
         
-        # 3. KERETA API (THOMAS THE TANK ENGINE & CARRIAGES)
+        # 3. KERETA API
         self.train_parts = []
         self.train_wheels = []
         
-        # Palet Warna Thomas
-        color_thomas_blue = (0.1, 0.4, 0.8)   # Biru cerah Thomas
-        color_thomas_red = (0.8, 0.1, 0.1)    # Merah sasis/bemper
-        color_face = (0.75, 0.75, 0.75)       # Wajah abu-abu pucat
-        color_black = (0.1, 0.1, 0.1)         # Hitam cerobong/atap
-        color_coach = (0.8, 0.5, 0.2)         # Oranye kecoklatan (Annie/Clarabel)
-        color_glass = (0.7, 0.9, 1.0)         # Kaca
-
-        y_base = 0.8    # Sasis
-        y_wheel = 0.4   # Roda (lebih rendah)
-
-        # --- LOKOMOTIF (THOMAS) ---
-        # 1. Sasis Bawah & Bemper (Merah)
-        loco_base = ColorCube(app, pos=(0, y_base, self.train_z), scale=(1.6, 0.2, 3.0), color=color_thomas_red)
-        loco_base.relative_offset = glm.vec3(0, 0, 0)
-        
-        # 2. Boiler / Tabung Mesin Tengah (Biru)
-        loco_boiler = ColorCube(app, pos=(0, 1.4, self.train_z - 0.4), scale=(1.0, 1.0, 2.0), color=color_thomas_blue)
-        loco_boiler.relative_offset = glm.vec3(0, 0.6, -0.4)
-        
-        # 3. Kotak Air Samping / Side Tanks (Biru)
-        loco_tank = ColorCube(app, pos=(0, 1.2, self.train_z - 0.1), scale=(1.45, 0.6, 1.6), color=color_thomas_blue)
-        loco_tank.relative_offset = glm.vec3(0, 0.4, -0.1)
-        
-        # 4. Kabin Masinis di Belakang (Biru)
-        loco_cabin = ColorCube(app, pos=(0, 1.7, self.train_z + 1.0), scale=(1.45, 1.6, 1.0), color=color_thomas_blue)
-        loco_cabin.relative_offset = glm.vec3(0, 0.9, 1.0)
-        
-        # 5. Atap Kabin (Hitam)
-        loco_roof = ColorCube(app, pos=(0, 2.55, self.train_z + 1.0), scale=(1.55, 0.1, 1.2), color=color_black)
-        loco_roof.relative_offset = glm.vec3(0, 1.75, 1.0)
-        
-        # 6. Wajah Thomas (Plat Abu-abu di depan)
-        loco_face = ColorCube(app, pos=(0, 1.4, self.train_z - 1.45), scale=(0.8, 0.8, 0.1), color=color_face)
-        loco_face.relative_offset = glm.vec3(0, 0.6, -1.45)
-        
-        # 7. Cerobong Asap (Hitam di moncong depan)
-        loco_chimney = ColorCube(app, pos=(0, 2.2, self.train_z - 1.1), scale=(0.2, 0.8, 0.2), color=color_black)
-        loco_chimney.relative_offset = glm.vec3(0, 1.4, -1.1)
-        
-        # 8. Kubah Kecil / Dome di atas boiler (Hitam)
-        loco_dome = ColorCube(app, pos=(0, 2.0, self.train_z - 0.4), scale=(0.3, 0.2, 0.3), color=color_black)
-        loco_dome.relative_offset = glm.vec3(0, 1.2, -0.4)
-        
-        # 9. Jendela Depan Kabin (Kaca)
-        loco_win = ColorCube(app, pos=(0, 1.8, self.train_z + 0.45), scale=(1.1, 0.4, 0.1), color=color_glass)
-        loco_win.relative_offset = glm.vec3(0, 1.0, 0.45)
-
-        self.train_parts.extend([loco_base, loco_boiler, loco_tank, loco_cabin, loco_roof, loco_face, loco_chimney, loco_dome, loco_win])
-        for p in self.train_parts[-9:]: add(p)
-
-        # --- 2 GERBONG (ANNIE & CLARABEL) ---
-        for g in range(1, 5): 
-            z_off = g * 6.5
+        def add_train_part(local_offset, scale, color, rot=(0, 0, 0)):
+            """
+            Membuat bagian kereta relatif terhadap titik anchor kereta.
+            Anchor kereta: glm.vec3(0, 2.625, self.train_z)
+            """
+            ts = 1.5 # Skala kereta diperbesar
+            s_off = (local_offset[0] * ts, local_offset[1] * ts, local_offset[2] * ts)
+            s_sca = (scale[0] * ts, scale[1] * ts, scale[2] * ts)
             
-            g_base = ColorCube(app, pos=(0, 0.8, self.train_z + z_off), scale=(1.6, 0.2, 2.8), color=color_black)
-            g_base.relative_offset = glm.vec3(0, 0, z_off)
-            
-            g_body = ColorCube(app, pos=(0, 1.7, self.train_z + z_off), scale=(1.5, 1.6, 2.8), color=color_coach)
-            g_body.relative_offset = glm.vec3(0, 0.9, z_off)
-            
-            g_roof = ColorCube(app, pos=(0, 2.55, self.train_z + z_off), scale=(1.6, 0.1, 2.9), color=(0.4, 0.4, 0.4))
-            g_roof.relative_offset = glm.vec3(0, 1.75, z_off)
-            
-            # Deretan Jendela Gerbong
-            for side in [-1, 1]:
-                x_win = 1.51 * side
-                for z_w in [-1.0, -0.33, 0.33, 1.0]: 
-                    total_win_z = z_off + z_w
-                    win = ColorCube(app, pos=(x_win, 1.9, self.train_z + total_win_z), scale=(0.01, 0.5, 0.4), color=color_glass)
-                    win.relative_offset = glm.vec3(x_win, 1.1, total_win_z)
-                    self.train_parts.append(win); add(win)
+            train_anchor = glm.vec3(0, 2.625, self.train_z)
+            obj = ColorCube(
+                app,
+                pos=train_anchor + glm.vec3(s_off),
+                rot=rot,
+                scale=s_sca,
+                color=color
+            )
+            obj.relative_offset = glm.vec3(s_off)
+            self.train_parts.append(obj)
+            add(obj)
+            return obj
 
-            # Sambungan
-            g_link = ColorCube(app, pos=(0, 0.8, self.train_z + z_off - 3.25), scale=(0.15, 0.05, 0.8), color=color_black)
-            g_link.relative_offset = glm.vec3(0, 0, z_off - 3.25)
+        def add_train_wheel(local_offset):
+            """
+            Roda/bogie kereta dibuat terpisah agar bisa diputar saat kereta bergerak.
+            """
+            ts = 1.5
+            s_off = (local_offset[0] * ts, local_offset[1] * ts, local_offset[2] * ts)
             
-            self.train_parts.extend([g_base, g_body, g_roof, g_link])
-            for p in [g_base, g_body, g_roof, g_link]: add(p)
+            train_anchor = glm.vec3(0, 2.625, self.train_z)
+            wheel = ColorCube(
+                app,
+                pos=train_anchor + glm.vec3(s_off),
+                scale=(0.28 * ts, 0.28 * ts, 0.28 * ts),
+                color=(0.04, 0.04, 0.04)
+            )
+            wheel.relative_offset = glm.vec3(s_off)
+            self.train_wheels.append((wheel, 0.0))
+            add(wheel)
+            return wheel
 
-        # --- RODA KERETA SEGI-8 ---
-        all_units_z = [0] + [i * 6.5 for i in range(1, 5)]
-        for i, base_z in enumerate(all_units_z):
-            w_color = color_black 
-            for side in [-1, 1]:
-                for f_b in [-1.2, 0, 1.2]: 
-                    total_z = base_z + f_b
-                    
-                    # Kubus Lurus
-                    w1 = ColorCube(app, pos=(side * 1.5, y_wheel, self.train_z + total_z), scale=(0.1, 0.25, 0.25), color=w_color)
-                    w1.relative_offset = glm.vec3(side * 1.5, 0, total_z)
-                    self.train_wheels.append((w1, total_z, 0.0))
-                    add(w1)
-                    
-                    # Kubus Miring 45 derajat
-                    w2 = ColorCube(app, pos=(side * 1.5, y_wheel, self.train_z + total_z), scale=(0.1, 0.25, 0.25), color=w_color)
-                    w2.relative_offset = glm.vec3(side * 1.5, 0, total_z)
-                    self.train_wheels.append((w2, total_z, 0.785398))
-                    add(w2)
+        # =========================
+        # A. LOKOMOTIF
+        # =========================
+        # Kereta bergerak dari Z positif ke Z negatif.
+        # Agar lokomotif di depan, kita beri offset Z yang paling negatif (paling maju).
+        loco_center_z = -2.2
+
+        # Body utama lokomotif putih
+        add_train_part(
+            local_offset=(0.0, -0.05, loco_center_z),
+            scale=(1.55, 1.05, 2.70),
+            color=(0.92, 0.92, 0.88)
+        )
+
+        # Atap lokomotif abu-abu
+        add_train_part(
+            local_offset=(0.0, 1.05, loco_center_z),
+            scale=(1.35, 0.18, 2.35),
+            color=(0.72, 0.72, 0.70)
+        )
+
+        # Bagian bawah lokomotif merah
+        add_train_part(
+            local_offset=(0.0, -1.00, loco_center_z - 1.65),
+            scale=(1.52, 0.22, 0.75),
+            color=(0.72, 0.05, 0.03)
+        )
+
+        # Muka depan lokomotif putih (sekarang menghadap ke -Z)
+        add_train_part(
+            local_offset=(0.0, 0.10, loco_center_z - 2.72),
+            scale=(1.50, 0.90, 0.08),
+            color=(0.95, 0.95, 0.92)
+        )
+
+        # Kaca depan lokomotif
+        add_train_part(
+            local_offset=(-0.45, 0.48, loco_center_z - 2.82),
+            scale=(0.36, 0.30, 0.04),
+            color=(0.05, 0.08, 0.12)
+        )
+        add_train_part(
+            local_offset=(0.45, 0.48, loco_center_z - 2.82),
+            scale=(0.36, 0.30, 0.04),
+            color=(0.05, 0.08, 0.12)
+        )
+
+        # Lampu depan lokomotif
+        add_train_part(
+            local_offset=(-0.65, 0.88, loco_center_z - 2.86),
+            scale=(0.13, 0.13, 0.04),
+            color=(1.00, 0.95, 0.65)
+        )
+        add_train_part(
+            local_offset=(0.65, 0.88, loco_center_z - 2.86),
+            scale=(0.13, 0.13, 0.04),
+            color=(1.00, 0.95, 0.65)
+        )
+        add_train_part(
+            local_offset=(0.0, 0.88, loco_center_z - 2.86),
+            scale=(0.13, 0.13, 0.04),
+            color=(1.00, 0.95, 0.65)
+        )
+
+        # Strip oranye dan biru di sisi lokomotif
+        for side_x in [-1.60, 1.60]:
+            add_train_part(
+                local_offset=(side_x, -0.05, loco_center_z),
+                scale=(0.035, 0.10, 2.25),
+                color=(1.00, 0.38, 0.02)
+            )
+            add_train_part(
+                local_offset=(side_x, -0.23, loco_center_z),
+                scale=(0.035, 0.055, 2.10),
+                color=(0.02, 0.18, 0.65)
+            )
+
+            # Panel kecil biru-oranye
+            add_train_part(
+                local_offset=(side_x, 0.35, loco_center_z - 0.75),
+                scale=(0.04, 0.23, 0.22),
+                color=(0.02, 0.18, 0.65)
+            )
+            add_train_part(
+                local_offset=(side_x, 0.15, loco_center_z - 0.98),
+                scale=(0.04, 0.12, 0.20),
+                color=(1.00, 0.38, 0.02)
+            )
+
+        # Ventilasi samping lokomotif
+        for side_x in [-1.61, 1.61]:
+            for z in [loco_center_z - 1.15, loco_center_z - 0.85, loco_center_z - 0.55]:
+                add_train_part(
+                    local_offset=(side_x, 0.45, z),
+                    scale=(0.035, 0.07, 0.16),
+                    color=(0.12, 0.12, 0.12)
+                )
+
+        # Box/mesin kecil di atas atap
+        for z in [loco_center_z - 0.4, loco_center_z + 0.5, loco_center_z + 1.4]:
+            add_train_part(
+                local_offset=(0.0, 1.28, z),
+                scale=(0.45, 0.12, 0.28),
+                color=(0.20, 0.20, 0.20)
+            )
+
+        # Roda lokomotif
+        for z in [loco_center_z - 1.55, loco_center_z - 0.45, loco_center_z + 0.65, loco_center_z + 1.75]:
+            add_train_wheel((-0.88, -1.23, z))
+            add_train_wheel((0.88, -1.23, z))
+
+        # =========================
+        # B. GERBONG PENUMPANG
+        # =========================
+        # Gerbong berada di belakang lokomotif (offset Z positif)
+        coach_centers = [4.8, 12.2, 19.6]
+
+        for coach_z in coach_centers:
+            # Body gerbong putih
+            add_train_part(
+                local_offset=(0.0, -0.02, coach_z),
+                scale=(1.45, 0.95, 3.35),
+                color=(0.94, 0.94, 0.91)
+            )
+
+            # Atap gerbong abu-abu terang
+            add_train_part(
+                local_offset=(0.0, 0.95, coach_z),
+                scale=(1.35, 0.18, 3.10),
+                color=(0.78, 0.78, 0.76)
+            )
+
+            # Bagian bawah gerbong abu gelap
+            add_train_part(
+                local_offset=(0.0, -0.93, coach_z),
+                scale=(1.45, 0.17, 3.20),
+                color=(0.16, 0.16, 0.16)
+            )
+
+            # Strip oranye dan biru di kedua sisi gerbong
+            for side_x in [-1.50, 1.50]:
+                add_train_part(
+                    local_offset=(side_x, -0.10, coach_z),
+                    scale=(0.035, 0.075, 3.05),
+                    color=(1.00, 0.38, 0.02)
+                )
+                add_train_part(
+                    local_offset=(side_x, -0.25, coach_z),
+                    scale=(0.035, 0.045, 3.05),
+                    color=(0.02, 0.18, 0.65)
+                )
+
+                # Deretan jendela gerbong
+                for w in range(7):
+                    z_window = coach_z - 2.25 + (w * 0.75)
+                    add_train_part(
+                        local_offset=(side_x, 0.35, z_window),
+                        scale=(0.035, 0.23, 0.22),
+                        color=(0.06, 0.09, 0.13)
+                    )
+
+                # Pintu gerbong depan-belakang
+                add_train_part(
+                    local_offset=(side_x, 0.10, coach_z - 2.85),
+                    scale=(0.035, 0.48, 0.18),
+                    color=(0.82, 0.82, 0.78)
+                )
+                add_train_part(
+                    local_offset=(side_x, 0.10, coach_z + 2.85),
+                    scale=(0.035, 0.48, 0.18),
+                    color=(0.82, 0.82, 0.78)
+                )
+
+            # Bogie/roda gerbong
+            for z in [coach_z - 2.15, coach_z + 2.15]:
+                add_train_wheel((-0.85, -1.20, z))
+                add_train_wheel((0.85, -1.20, z))
                     
         # 4. NEW CROSSING SIGNALS
         self.crossing_signals = []
@@ -2467,6 +2636,7 @@ class Scene:
         # Signal 2: Background-Left (warns X- traffic, faces X+)
         sig2 = GradeCrossingSignal(self, pos=(-8, 0, -10), rotation_y=180, gate_pivot_side=1)
         self.crossing_signals.extend([sig1, sig2])
+
 
         # 5. OBJECT POOL KENDARAAN
         for _ in range(self.max_pool):
@@ -2477,7 +2647,7 @@ class Scene:
 
         self._spawn_vehicle(1) 
         self._spawn_vehicle(-1)
-        
+
         # 6. PARTIKEL ASAP THOMAS
         self.smoke_pool = []
         for _ in range(30):
@@ -2487,8 +2657,8 @@ class Scene:
 
     def _spawn_vehicle(self, direction):
         # Batas fisik jalan adalah 100 unit (scale=100).
-        # Spawn di luar batas visual (-105/105) agar masuk dengan smooth.
-        spawn_x = -105.0 if direction == 1 else 105.0
+        # Spawn tepat di batas visual (100/-100) agar muncul dari ujung jalan.
+        spawn_x = -100.0 if direction == 1 else 100.0
         for v in self.vehicles_pool:
             if v.active and v.direction == direction:
                 # Cek jarak aman agar tidak menumpuk saat spawn baru
@@ -2579,11 +2749,9 @@ class Scene:
 
                 car.pos.x += car.current_speed * dt
                 
-                # PERBAIKAN BUG VANISHING:
-                # Road boundary adalah 100. Gunakan 110 agar mobil benar-benar keluar dari pandangan 
-                # (termasuk panjang bodi mobil) sebelum di-reset ke ujung lainnya.
-                if lane_dir == 1 and car.pos.x > 110.0: car.pos.x = -110.0
-                if lane_dir == -1 and car.pos.x < -110.0: car.pos.x = 110.0
+                # Batas reset kendaraan agar tepat di ujung jalan (100.0)
+                if lane_dir == 1 and car.pos.x > 100.0: car.pos.x = -100.0
+                if lane_dir == -1 and car.pos.x < -100.0: car.pos.x = 100.0
 
         # --- FSM PALANG & KERETA (UPDATE JEDA LEBIH CEPAT) ---
         if self.state == 'IDLE':
@@ -2617,15 +2785,18 @@ class Scene:
                 self.state = 'IDLE' # Sampai stasiun ujung, baru hilang/reset
 
         # --- UPDATE MATRIX KERETA ---
+        train_anchor = glm.vec3(0, 2.625, self.train_z)
         for part in self.train_parts:
-            part.pos.z = self.train_z + part.relative_offset.z
+            # Update posisi seluruh bagian bodi mengikuti anchor
+            part.pos = train_anchor + part.relative_offset
             part.m_model = part.get_model_matrix()
 
-        # Update Rotasi Roda Mundur Kereta
-        wheel_rot_angle = -self.train_z * 2.0
-        for wheel, total_z, base_rot in self.train_wheels:
-            wheel.pos = glm.vec3(wheel.relative_offset.x, 0.4, self.train_z + total_z)
-            # Putar roda ditambah offset kemiringan 45 derajatnya
+        # Update Rotasi Roda Kereta (Maju ke arah -Z)
+        wheel_rot_angle = self.train_z * 2.0
+        for wheel, base_rot in self.train_wheels:
+            # Update posisi roda mengikuti anchor
+            wheel.pos = train_anchor + wheel.relative_offset
+            # Putar roda
             wheel.rot.x = wheel_rot_angle + base_rot
             wheel.m_model = wheel.get_model_matrix()
 
@@ -2637,18 +2808,3 @@ class Scene:
 
         for obj in self.objects:
             obj.update()
-        
-        # --- UPDATE ASAP KERETA ---
-        # Asap akan terus ngebul selama kereta tidak IDLE (sedang jalan)
-        if self.state in ['CLOSING', 'TRAIN_CROSSING', 'OPENING', 'TRAIN_LEAVING']:
-            if random.random() < 0.4:
-                for smoke in self.smoke_pool:
-                    if not smoke.active:
-                        smoke.spawn((0, 2.6, self.train_z - 1.1))
-                        break
-        
-        for smoke in self.smoke_pool:
-            smoke.update(dt)
-        
-        for smoke in self.smoke_pool:
-            smoke.update(dt)

@@ -43,30 +43,20 @@ class Camera:
         if keys[pg.K_d]:
             self.look_ud -= self.rotation_speed * dt
 
-        # L: Look Left, R: Look Right
-        if keys[pg.K_l]:
-            self.look_lr -= self.rotation_speed * dt
-        if keys[pg.K_r]:
-            self.look_lr += self.rotation_speed * dt
-
         # Batasi Pitch agar tidak flip
         self.look_ud = max(-89.0, min(89.0, self.look_ud))
 
-        # --- TRANSLASI (Zoom In / Out) ---
-        # I: Zoom In (Maju), O: Zoom Out (Mundur)
+        # --- TRANSLASI ---
+        # I: Maju, O: Mundur
         if keys[pg.K_i]:
             self.position += self.forward * self.camera_speed * dt
         if keys[pg.K_o]:
             self.position -= self.forward * self.camera_speed * dt
 
-        # Support WASD movement also
-        if keys[pg.K_w]:
-            self.position += self.forward * self.camera_speed * dt
-        if keys[pg.K_s]:
-            self.position -= self.forward * self.camera_speed * dt
-        if keys[pg.K_a]:
+        # L: Geser Kiri, R: Geser Kanan
+        if keys[pg.K_l]:
             self.position -= self.right * self.camera_speed * dt
-        if keys[pg.K_d]:
+        if keys[pg.K_r]:
             self.position += self.right * self.camera_speed * dt
 
     def rotate(self):
