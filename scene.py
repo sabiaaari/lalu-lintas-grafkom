@@ -117,27 +117,59 @@ class Vehicle:
         self.wheel_rot += abs(self.current_speed) * dt * 5.0
         
         # Update Body
-        self.body.pos = glm.vec3(self.pos)
-        self.body.m_model = self.body.get_model_matrix()
+        if hasattr(self, 'body'):
+            self.body.pos = glm.vec3(self.pos)
+            # Pastikan perhitungan matriksnya juga ikut masuk ke dalam (menjorok)!
+            self.body.m_model = self.body.get_model_matrix()
         
         # Update Cabin
-        self.cabin.pos = self.pos + glm.vec3(0, 0.45, 0)
-        self.cabin.m_model = self.cabin.get_model_matrix()
+        # Update posisi komponen HANYA jika komponen tersebut dimiliki oleh tipe mobil ini
+        if hasattr(self, 'cabin'):
+            self.cabin.pos = self.pos + glm.vec3(0, 0.45, 0)
+            
+        if hasattr(self, 'body'):
+            self.body.pos = self.pos + glm.vec3(0, 0.25, 0)
+            
+        if hasattr(self, 'bak'):
+            self.bak.pos = self.pos + glm.vec3(-0.5, 0.3, 0)
         
         # Update Wheels (Relative to X-axis forward)
-        w_offsets = [
-            glm.vec3(0.6, -0.2, 0.4), glm.vec3(0.6, -0.2, -0.4),
-            glm.vec3(-0.6, -0.2, 0.4), glm.vec3(-0.6, -0.2, -0.4)
-        ]
-        for i, wheel in enumerate(self.wheels):
+        # Cek apakah mobil ini beroda 6 (misalnya Truk) atau beroda 4
+        if len(self.wheels) == 6:
+            w_offsets = [
+                glm.vec3(0.6, -0.2, 0.4),  glm.vec3(0.6, -0.2, -0.4),  # Roda depan (Kiri, Kanan)
+                glm.vec3(0.0, -0.2, 0.4),  glm.vec3(0.0, -0.2, -0.4),  # Roda tengah (Kiri, Kanan)
+                glm.vec3(-0.6, -0.2, 0.4), glm.vec3(-0.6, -0.2, -0.4)  # Roda belakang (Kiri, Kanan)
+            ]
+        else:
+            w_offsets = [
+                glm.vec3(0.6, -0.2, 0.4),  glm.vec3(0.6, -0.2, -0.4),  # Roda depan (Kiri, Kanan)
+                glm.vec3(-0.6, -0.2, 0.4), glm.vec3(-0.6, -0.2, -0.4)  # Roda belakang (Kiri, Kanan)
+            ]
+
+        # Pasang offset dengan aman menggunakan fungsi min() untuk mencegah crash
+        limit = min(len(self.wheels), len(w_offsets))
+        for i in range(limit):
+            wheel = self.wheels[i]
             wheel.pos = self.pos + w_offsets[i]
             wheel.rot.z = -self.wheel_rot * self.direction # Putar roda di sumbu Z
             wheel.m_model = wheel.get_model_matrix()
-
+    
+    # Pastikan 'def render' ini lurus dengan 'def update' dan 'def __init__'
     def render(self):
-        if not self.active: return
-        for part in self.parts:
-            part.render()
+        # Jika mobil tidak aktif (misal sudah lewat batas jalan), jangan digambar
+        if getattr(self, 'active', False) == False:
+            return
+
+        # Gambar semua komponen badan mobil secara aman
+        if hasattr(self, 'parts'):
+            for part in self.parts:
+                part.render()
+
+        # Gambar semua roda secara aman
+        if hasattr(self, 'wheels'):
+            for wheel in self.wheels:
+                wheel.render()
 
 
 class GradeCrossingSignal:
