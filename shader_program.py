@@ -3,6 +3,7 @@ class ShaderProgram:
         self.ctx = ctx
         self.programs = {
             'default_color': self.get_program('default_color'),
+            'textured': self.get_program('textured'),
         }
 
     def get_program(self, shader_program_name):

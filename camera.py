@@ -3,7 +3,7 @@ import pygame as pg
 
 FOV = 70
 NEAR = 0.1
-FAR = 100.0
+FAR = 600.0
 MOUSE_SENS = 0.04
 
 class Camera:
