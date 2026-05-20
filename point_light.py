@@ -6,6 +6,12 @@ class PointLight:
         self.position = glm.vec3(position)
         self.color = glm.vec3(color)
         self.intensity = intensity
-        self.Ia = 0.20 * self.color * intensity
-        self.Id = 0.85 * self.color * intensity
+        self.update_properties(self.color, self.intensity)
+
+    def update_properties(self, color, intensity):
+        self.color = glm.vec3(color)
+        self.intensity = intensity
+        self.Ia = 0.15 * self.color * intensity
+        self.Id = 0.80 * self.color * intensity
         self.Is = 0.40 * self.color * intensity
+

@@ -21,10 +21,10 @@ void main() {
     vec3 N = normalize(normal);
     vec3 L = normalize(light.position - frag_pos);
     vec3 V = normalize(cam_pos - frag_pos);
-    vec3 R = reflect(-L, N);
+    vec3 H = normalize(L + V);
 
     float diff = max(dot(N, L), 0.0);
-    float spec = pow(max(dot(V, R), 0.0), 32.0) * step(0.0, diff);
+    float spec = pow(max(dot(N, H), 0.0), 64.0) * step(0.0, diff);
 
     vec3 ambient = light.Ia * u_color;
     vec3 diffuse = light.Id * diff * u_color;

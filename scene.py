@@ -291,6 +291,7 @@ class Scene:
     def __init__(self, app):
         self.app = app
         self.objects = []
+        self.night_lights = [] # Objek yang akan menyala saat malam
         
         self.state = 'IDLE' 
         self.gate_angle = 90.0 
@@ -317,6 +318,11 @@ class Scene:
     def load(self):
         app = self.app
         add = self.add_object
+        
+        def add_night_light(obj):
+            if obj:
+                self.night_lights.append(obj)
+            return obj
         
         # ==========================================================
         # PETA KOORDINAT UTAMA - RURAL VILLAGE ENVIRONMENT
@@ -710,7 +716,7 @@ class Scene:
             )
 
             # Jendela depan kiri dan kanan
-            add_box(
+            add_night_light(add_box(
                 "house front left window",
                 x - 1.0 * scale,
                 1.20 * scale,
@@ -719,8 +725,8 @@ class Scene:
                 0.28 * scale,
                 0.04 * scale,
                 (0.08, 0.13, 0.16),
-            )
-            add_box(
+            ))
+            add_night_light(add_box(
                 "house front right window",
                 x + 1.0 * scale,
                 1.20 * scale,
@@ -729,7 +735,7 @@ class Scene:
                 0.28 * scale,
                 0.04 * scale,
                 (0.08, 0.13, 0.16),
-            )
+            ))
 
         def add_village_house_facing(
             x,
@@ -810,7 +816,7 @@ class Scene:
             )
 
             # Jendela depan kiri
-            add_box(
+            add_night_light(add_box(
                 "village house front left window",
                 x - 1.0 * scale,
                 1.20 * scale,
@@ -819,10 +825,10 @@ class Scene:
                 0.28 * scale,
                 0.04 * scale,
                 (0.08, 0.13, 0.16),
-            )
+            ))
 
             # Jendela depan kanan
-            add_box(
+            add_night_light(add_box(
                 "village house front right window",
                 x + 1.0 * scale,
                 1.20 * scale,
@@ -831,7 +837,7 @@ class Scene:
                 0.28 * scale,
                 0.04 * scale,
                 (0.08, 0.13, 0.16),
-            )
+            ))
 
         def add_small_shed(x, z, roof_color=(0.65, 0.25, 0.10), scale=1.0):
             # Gubuk kecil/pos kecil untuk detail area desa.
@@ -859,7 +865,7 @@ class Scene:
                 1.1 * scale,
                 roof_color,
             )
-            add_box(
+            add_night_light(add_box(
                 "small shed door",
                 x,
                 0.45 * scale,
@@ -868,7 +874,7 @@ class Scene:
                 0.45 * scale,
                 0.04 * scale,
                 (0.20, 0.10, 0.04),
-            )
+            ))
 
         def add_crop_field(cx, zc, sx, sz, crop_rows=7, crop_cols=10):
             # Petak kebun/sawah kering.
@@ -2389,22 +2395,22 @@ class Scene:
 
         # Lampu kecil stasiun
         for lamp_z in [st_z - 15, st_z, st_z + 15]:
-            add(
+            add_night_light(add(
                 ColorCube(
                     app,
                     pos=(-7.4, 6.3, lamp_z),
                     scale=(0.35, 0.08, 0.35),
                     color=(1.0, 0.95, 0.65),
                 )
-            )
-            add(
+            ))
+            add_night_light(add(
                 ColorCube(
                     app,
                     pos=(7.4, 6.3, lamp_z),
                     scale=(0.35, 0.08, 0.35),
                     color=(1.0, 0.95, 0.65),
                 )
-            )
+            ))
         
         # 3. KERETA API
         self.train_parts = []
@@ -2691,6 +2697,23 @@ class Scene:
         GATE_X_R = -8.0 
         GATE_X_L = 8.0  
         
+        # --- LOGIKA NIGHT LIGHTS ---
+        # Lampu mulai menyala senja (17:00) dan mati subuh (07:00)
+        t = self.app.sim_time
+        if t >= 17.0 or t < 7.0:
+            # Semakin malam semakin terang emissive-nya
+            if t >= 17.0 and t < 19.0: factor = (t - 17.0) / 2.0
+            elif t >= 5.0 and t < 7.0: factor = 1.0 - (t - 5.0) / 2.0
+            else: factor = 1.0
+            
+            # Warna lampu kuning hangat
+            ev = glm.vec3(0.95, 0.85, 0.5) * factor
+            for light in self.night_lights:
+                light.emissive = ev
+        else:
+            for light in self.night_lights:
+                light.emissive = glm.vec3(0.0)
+
         # --- LOGIKA KENDARAAN ---
         active_list = [v for v in self.vehicles_pool if v.active]
         for lane_dir in [1, -1]:

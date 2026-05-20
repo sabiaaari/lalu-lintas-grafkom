@@ -1,6 +1,7 @@
 import sys
 import pygame as pg
 import moderngl as mgl
+from pyglm import glm
 
 from camera import Camera
 from point_light import PointLight
@@ -31,7 +32,11 @@ class SxvxnEngine:
         self.clock = pg.time.Clock()
         self.time = 0.0
         self.delta_time = 0.0
-        self.background_color = (0.55, 0.78, 0.95) # Warna langit cerah
+        
+        # --- SISTEM WAKTU (DAY-NIGHT CYCLE) ---
+        self.sim_time = 12.0 # Mulai di jam 12 siang
+        self.time_speed = 0.5 # Kecepatan siklus (1 jam simulasi = 2 detik real time jika 0.5)
+        self.background_color = (0.55, 0.78, 0.95)
 
         self.light = PointLight(position=(-8.0, 12.0, 10.0), color=(1.0, 0.96, 0.86), intensity=1.35)
         self.camera = Camera(self)
@@ -39,6 +44,47 @@ class SxvxnEngine:
         self.texture = Texture(self)
         self.scene = Scene(self)
         self.scene_renderer = SceneRenderer(self)
+
+    def update_day_night(self):
+        # SIKLUS JAM PASIR: Berubah setiap 20 detik (Total siklus 40 detik)
+        # 0-20 detik: Siang (dengan transisi di akhir)
+        # 20-40 detik: Malam (dengan transisi di akhir)
+        cycle_duration = 20.0
+        total_cycle = cycle_duration * 2
+        current_cycle_time = self.time % total_cycle
+        
+        transition_dur = 4.0 # Durasi transisi halus selama 4 detik
+        
+        day_bg = glm.vec3(0.55, 0.78, 0.95)
+        night_bg = glm.vec3(0.02, 0.02, 0.05)
+        day_light_col = glm.vec3(1.0, 0.96, 0.86)
+        night_light_col = glm.vec3(0.3, 0.3, 0.5)
+        
+        if 0.0 <= current_cycle_time < cycle_duration - transition_dur:
+            # SIANG PENUH
+            factor = 0.0
+        elif cycle_duration - transition_dur <= current_cycle_time < cycle_duration:
+            # TRANSISI SIANG -> MALAM
+            factor = (current_cycle_time - (cycle_duration - transition_dur)) / transition_dur
+        elif cycle_duration <= current_cycle_time < total_cycle - transition_dur:
+            # MALAM PENUH
+            factor = 1.0
+        else:
+            # TRANSISI MALAM -> SIANG
+            factor = 1.0 - (current_cycle_time - (total_cycle - transition_dur)) / transition_dur
+            
+        # Update warna dan intensitas
+        self.background_color = glm.lerp(day_bg, night_bg, factor)
+        intensity = glm.lerp(1.35, 0.15, factor)
+        light_color = glm.lerp(day_light_col, night_light_col, factor)
+        
+        # Update sim_time untuk sinkronisasi lampu di scene.py
+        # Kita set sim_time agar sesuai dengan logika: >17 atau <7 adalah malam
+        # Jika factor > 0.5 (mendekati malam), kita set ke jam 0 (tengah malam)
+        # Jika factor <= 0.5 (mendekati siang), kita set ke jam 12 (siang hari)
+        self.sim_time = 0.0 if factor > 0.5 else 12.0
+        
+        self.light.update_properties(light_color, intensity)
 
     def check_events(self):
         for event in pg.event.get():
@@ -54,6 +100,12 @@ class SxvxnEngine:
             # EVENT LISTENER: Tombol Spasi untuk spawn kendaraan
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 self.scene.handle_input_space()
+
+            # Tombol +/- untuk mengatur kecepatan waktu
+            if event.type == pg.KEYDOWN and event.key == pg.K_EQUALS: # Plus key
+                self.time_speed = min(10.0, self.time_speed + 0.5)
+            if event.type == pg.KEYDOWN and event.key == pg.K_MINUS:
+                self.time_speed = max(0.0, self.time_speed - 0.5)
 
             if event.type == pg.KEYDOWN and event.key == pg.K_TAB:
                 self.camera.use_orbit = not self.camera.use_orbit
@@ -91,6 +143,7 @@ class SxvxnEngine:
             self.get_time()
             self.check_events()
             self.camera.update()
+            self.update_day_night()
             self.scene.update() # Update logika perlintasan & aktor
             self.render()
 
