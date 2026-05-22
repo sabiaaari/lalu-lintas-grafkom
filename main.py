@@ -92,9 +92,15 @@ class SxvxnEngine:
         }
 
     def update_day_night(self):
-        # Sesuai permintaan: 24 jam = 48 detik (1 jam = 2 detik)
-        # 24 jam / 48 detik = 0.5 jam per detik real-time
-        hours_per_second = 0.5
+        # Sesuai permintaan:
+        # Siang (06:00 - 18:00): 1 jam = 5 detik real-time -> 1/5 jam per detik
+        # Malam (18:00 - 06:00): 1 jam = 1 detik real-time -> 1 jam per detik
+        
+        if 6.0 <= self.sim_time < 18.0:
+            hours_per_second = 1.0 / 5.0
+        else:
+            hours_per_second = 1.0
+            
         self.sim_time = (self.sim_time + hours_per_second * self.delta_time * self.time_speed) % 24
 
         # --- LOGIKA VISUAL DAY-NIGHT ---
@@ -128,11 +134,7 @@ class SxvxnEngine:
                 pg.quit()
                 sys.exit()
 
-            # EVENT LISTENER: Tombol Enter untuk trigger perlintasan
-            if event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
-                self.scene.handle_input_enter()
-
-            # EVENT LISTENER: Tombol Spasi untuk spawn kendaraan
+            # EVENT LISTENER: Tombol Space untuk spawn kendaraan
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 self.scene.handle_input_space()
 
