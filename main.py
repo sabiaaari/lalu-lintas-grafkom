@@ -1,4 +1,6 @@
 import sys
+import math
+import numpy as np
 import pygame as pg
 import moderngl as mgl
 from pyglm import glm
@@ -14,6 +16,7 @@ from scene_renderer import SceneRenderer
 class SxvxnEngine:
     def __init__(self, win_size=(1280, 720)):
         pg.init()
+        pg.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
         pg.display.set_caption("Modern GL Basics - Railway Crossing")
         self.WIN_SIZE = win_size
 
@@ -39,51 +42,83 @@ class SxvxnEngine:
         self.background_color = (0.55, 0.78, 0.95)
 
         self.light = PointLight(position=(-8.0, 12.0, 10.0), color=(1.0, 0.96, 0.86), intensity=1.35)
+        
+        # Audio
+        self.sounds = self.create_synth_sounds()
+        
         self.camera = Camera(self)
         self.mesh = Mesh(self)
         self.texture = Texture(self)
         self.scene = Scene(self)
         self.scene_renderer = SceneRenderer(self)
 
+    def create_synth_sounds(self):
+        sample_rate = 22050
+        
+        def make_sound(arr):
+            # Convert to 16-bit signed integer
+            arr = (arr * 32767).astype(np.int16)
+            # Make stereo
+            stereo = np.zeros((arr.size, 2), dtype=np.int16)
+            stereo[:, 0] = arr
+            stereo[:, 1] = arr
+            return pg.sndarray.make_sound(stereo)
+
+        # 1. Bell Sound (Ding)
+        duration = 0.5
+        t = np.linspace(0, duration, int(sample_rate * duration), False)
+        bell = np.sin(2 * np.pi * 880 * t) * np.exp(-5 * t)
+        
+        # 2. Train Whistle (Tuuuut)
+        duration_whistle = 1.5
+        t_w = np.linspace(0, duration_whistle, int(sample_rate * duration_whistle), False)
+        whistle = (np.sin(2 * np.pi * 330 * t_w) + 0.5 * np.sin(2 * np.pi * 440 * t_w)) * 0.4
+        # Fade in/out
+        fade = np.ones_like(t_w)
+        fade[:1000] = np.linspace(0, 1, 1000)
+        fade[-1000:] = np.linspace(1, 0, 1000)
+        whistle *= fade
+
+        # 3. Engine Chug (Rhythmic noise)
+        duration_chug = 0.4
+        t_c = np.linspace(0, duration_chug, int(sample_rate * duration_chug), False)
+        noise = np.random.uniform(-1, 1, t_c.size)
+        chug = noise * np.exp(-15 * t_c) * 0.3
+
+        return {
+            'bell': make_sound(bell),
+            'whistle': make_sound(whistle),
+            'chug': make_sound(chug)
+        }
+
     def update_day_night(self):
-        # SIKLUS JAM PASIR: Berubah setiap 20 detik (Total siklus 40 detik)
-        # 0-20 detik: Siang (dengan transisi di akhir)
-        # 20-40 detik: Malam (dengan transisi di akhir)
-        cycle_duration = 20.0
-        total_cycle = cycle_duration * 2
-        current_cycle_time = self.time % total_cycle
-        
-        transition_dur = 4.0 # Durasi transisi halus selama 4 detik
-        
+        # Sesuai permintaan: 24 jam = 48 detik (1 jam = 2 detik)
+        # 24 jam / 48 detik = 0.5 jam per detik real-time
+        hours_per_second = 0.5
+        self.sim_time = (self.sim_time + hours_per_second * self.delta_time * self.time_speed) % 24
+
+        # --- LOGIKA VISUAL DAY-NIGHT ---
+        # 0.0 = Tengah Malam, 12.0 = Siang Terik, 18.0 = Senja, 6.0 = Subuh
+        # Mapping sim_time ke intensitas cahaya dan warna langit
+
         day_bg = glm.vec3(0.55, 0.78, 0.95)
-        night_bg = glm.vec3(0.02, 0.02, 0.05)
+        night_bg = glm.vec3(0.05, 0.08, 0.20)
         day_light_col = glm.vec3(1.0, 0.96, 0.86)
         night_light_col = glm.vec3(0.3, 0.3, 0.5)
-        
-        if 0.0 <= current_cycle_time < cycle_duration - transition_dur:
-            # SIANG PENUH
-            factor = 0.0
-        elif cycle_duration - transition_dur <= current_cycle_time < cycle_duration:
-            # TRANSISI SIANG -> MALAM
-            factor = (current_cycle_time - (cycle_duration - transition_dur)) / transition_dur
-        elif cycle_duration <= current_cycle_time < total_cycle - transition_dur:
-            # MALAM PENUH
-            factor = 1.0
-        else:
-            # TRANSISI MALAM -> SIANG
-            factor = 1.0 - (current_cycle_time - (total_cycle - transition_dur)) / transition_dur
-            
+
+        # Gunakan kurva cosinus untuk transisi yang sangat halus
+        # Kita geser 12 jam agar puncaknya di jam 12 siang (cos(0) = 1)
+        # sim_time 0 -> factor 1 (malam), sim_time 12 -> factor 0 (siang)
+        # 15 derajat per jam (360/24)
+        factor = 0.5 * (1.0 - math.cos(math.radians((self.sim_time) * 15))) # factor=0 di jam 0, factor=1 di jam 12
+        # Kita balik agar factor=1 di malam hari
+        night_factor = 1.0 - factor
+
         # Update warna dan intensitas
-        self.background_color = glm.lerp(day_bg, night_bg, factor)
-        intensity = glm.lerp(1.35, 0.15, factor)
-        light_color = glm.lerp(day_light_col, night_light_col, factor)
-        
-        # Update sim_time untuk sinkronisasi lampu di scene.py
-        # Kita set sim_time agar sesuai dengan logika: >17 atau <7 adalah malam
-        # Jika factor > 0.5 (mendekati malam), kita set ke jam 0 (tengah malam)
-        # Jika factor <= 0.5 (mendekati siang), kita set ke jam 12 (siang hari)
-        self.sim_time = 0.0 if factor > 0.5 else 12.0
-        
+        self.background_color = glm.lerp(day_bg, night_bg, night_factor)
+        intensity = glm.lerp(1.35, 0.15, night_factor)
+        light_color = glm.lerp(day_light_col, night_light_col, night_factor)
+
         self.light.update_properties(light_color, intensity)
 
     def check_events(self):

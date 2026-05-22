@@ -37,26 +37,26 @@ class Camera:
         dt = self.app.delta_time
 
         # --- ROTASI (Pitch & Yaw) ---
-        # U: Look Up, D: Look Down
-        if keys[pg.K_u]:
+        # Q: Look Up, E: Look Down
+        if keys[pg.K_q]:
             self.look_ud += self.rotation_speed * dt
-        if keys[pg.K_d]:
+        if keys[pg.K_e]:
             self.look_ud -= self.rotation_speed * dt
 
         # Batasi Pitch agar tidak flip
         self.look_ud = max(-89.0, min(89.0, self.look_ud))
 
         # --- TRANSLASI ---
-        # I: Maju, O: Mundur
-        if keys[pg.K_i]:
+        # W: Maju, S: Mundur
+        if keys[pg.K_w]:
             self.position += self.forward * self.camera_speed * dt
-        if keys[pg.K_o]:
+        if keys[pg.K_s]:
             self.position -= self.forward * self.camera_speed * dt
 
-        # L: Geser Kiri, R: Geser Kanan
-        if keys[pg.K_l]:
+        # A: Geser Kiri, D: Geser Kanan
+        if keys[pg.K_a]:
             self.position -= self.right * self.camera_speed * dt
-        if keys[pg.K_r]:
+        if keys[pg.K_d]:
             self.position += self.right * self.camera_speed * dt
 
     def rotate(self):
@@ -81,13 +81,13 @@ class Camera:
         keys = pg.key.get_pressed()
         rotate_speed = 50.0 * self.app.delta_time
         
-        if keys[pg.K_LEFT]:
+        if keys[pg.K_a]:
             self.look_lr += rotate_speed
-        if keys[pg.K_RIGHT]:
+        if keys[pg.K_d]:
             self.look_lr -= rotate_speed
-        if keys[pg.K_UP]:
+        if keys[pg.K_w]:
             self.look_ud += rotate_speed
-        if keys[pg.K_DOWN]:
+        if keys[pg.K_s]:
             self.look_ud -= rotate_speed
 
         rel_x, rel_y = pg.mouse.get_rel()

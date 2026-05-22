@@ -122,9 +122,26 @@ class Vehicle:
             
         self.all_parts = self.parts + self.wheels
         self.deceleration, self.accel_rate = 10.0, 8.0
+        
+        # --- HEADLIGHTS (LAMPU KENDARAAN) ---
+        self.headlights = []
+        headlight_col = (1.0, 1.0, 0.9)
+        # Posisi lampu di depan bodi utama
+        l_pos = glm.vec3(self.length / (2.0 * vs), 0.1, 0.6)
+        r_pos = glm.vec3(self.length / (2.0 * vs), 0.1, -0.6)
+        
+        for p in [l_pos, r_pos]:
+            bulb = ColorCube(app, scale=(0.1 * vs, 0.15 * vs, 0.2 * vs), color=headlight_col)
+            bulb.relative_offset = p * vs
+            self.headlights.append(bulb)
+            # Registration will be handled by Scene.load to avoid AttributeError
 
     def update(self):
-        if not self.active: return
+        if not self.active: 
+            # Jika kendaraan tidak aktif, matikan lampu
+            for h in self.headlights:
+                h.emissive = glm.vec3(0.0)
+            return
         dt = self.app.delta_time
 
         # --- DYNAMIC ACCELERATION (PERCEPATAN DARURAT) ---
@@ -170,10 +187,17 @@ class Vehicle:
             wheel.rot.z = (-self.wheel_rot * self.direction) + wheel.base_rot
             wheel.m_model = wheel.get_model_matrix()
 
+        for h in self.headlights:
+            off_x = h.relative_offset.x * self.direction
+            h.pos = self.pos + glm.vec3(off_x, h.relative_offset.y, h.relative_offset.z)
+            h.m_model = h.get_model_matrix()
+
     def render(self):
         if not self.active: return
         for part in self.all_parts:
             part.render()
+        for h in self.headlights:
+            h.render()
 
 class SmokeParticle:
     def __init__(self, app):
@@ -309,6 +333,11 @@ class Scene:
         self.max_pool = 10
         self.SAFE_DISTANCE = 3.5
         self.spawn_count = 0
+        
+        # Audio state
+        self.chug_timer = 0.0
+        self.bell_timer = 0.0
+        self.whistle_played = False
         
         self.load()
 
@@ -1123,6 +1152,35 @@ class Scene:
         # - Crossing berada di pusat map, X sekitar -10 s/d 10 dan Z sekitar -10 s/d 10.
         # ==========================================================
 
+        def add_street_lamp(x, z, rot_y=0):
+            # Tiang lampu jalan
+            # Dipasang di pinggir jalan raya
+            concrete_base_color = (0.4, 0.4, 0.4)
+            pole_color = (0.2, 0.2, 0.2)
+            lamp_color = (1.0, 0.95, 0.7)
+            
+            # Base
+            add(ColorCube(app, pos=(x, 0.15, z), scale=(0.4, 0.15, 0.4), color=concrete_base_color))
+            # Tiang utama
+            add(ColorCube(app, pos=(x, 2.5, z), scale=(0.12, 2.5, 0.12), color=pole_color))
+            # Lengan lampu
+            angle_rad = math.radians(rot_y)
+            dir_vec = glm.vec3(math.sin(angle_rad), 0, math.cos(angle_rad))
+            arm_pos = glm.vec3(x, 4.8, z) + dir_vec * 1.2
+            add(ColorCube(app, pos=arm_pos, scale=(0.8, 0.1, 0.12), rot=(0, rot_y, 0), color=pole_color))
+            # Rumah lampu & Bohlam (Emissive)
+            bulb_pos = arm_pos + dir_vec * 0.6 + glm.vec3(0, -0.15, 0)
+            bulb = ColorCube(app, pos=bulb_pos, scale=(0.3, 0.1, 0.25), rot=(0, rot_y, 0), color=lamp_color)
+            add_night_light(bulb)
+            add(bulb)
+
+        # Letakkan lampu jalan di sepanjang jalan raya (Z=8.5 dan Z=-8.5)
+        for x_lamp in range(-90, 100, 30):
+            # Hindari area rel/crossing
+            if abs(x_lamp) < 15: continue
+            add_street_lamp(x_lamp, 9.5, rot_y=180) # Menghadap jalan (Z-)
+            add_street_lamp(x_lamp, -9.5, rot_y=0)  # Menghadap jalan (Z+)
+
         # ----------------------------------------------------------
         # TANAH UTAMA 200 x 200 UNIT (DIPERLUAS MENJADI 200 x 230 UNIT)
         # ----------------------------------------------------------
@@ -1445,12 +1503,11 @@ class Scene:
         )
 
         # Pos Penjaga (Diperbesar Proporsional & Digeser)
-        add(ColorCube(app, pos=(12, 0.2, 12), scale=(2.2, 0.2, 2.2), color=(0.5, 0.5, 0.5)))    
-        add(ColorCube(app, pos=(12, 1.2, 12), scale=(1.8, 0.8, 1.8), color=(0.8, 0.8, 0.7)))    
-        add(ColorCube(app, pos=(12, 2.6, 12), scale=(1.6, 0.6, 1.6), color=(0.7, 0.9, 1.0)))    
-        add(ColorCube(app, pos=(12, 3.4, 12), scale=(2.0, 0.3, 2.0), color=(0.6, 0.2, 0.2)))   
+        add(ColorCube(app, pos=(12, 0.2, 12), scale=(2.2, 0.2, 2.2), color=(0.5, 0.5, 0.5)))
+        add(ColorCube(app, pos=(12, 1.2, 12), scale=(1.8, 0.8, 1.8), color=(0.8, 0.8, 0.7)))
+        add_night_light(add(ColorCube(app, pos=(12, 2.6, 12), scale=(1.6, 0.6, 1.6), color=(0.7, 0.9, 1.0))))
+        add(ColorCube(app, pos=(12, 3.4, 12), scale=(2.0, 0.3, 2.0), color=(0.6, 0.2, 0.2)))
         add(ColorCube(app, pos=(12, 4.4, 12), scale=(0.04, 1.0, 0.04), color=(0.1, 0.1, 0.1)))
-
         # 2. LINGKUNGAN DESA BERDASARKAN ACUAN FINAL
         # ==========================================================
         # 2A. AREA SAWAH / LADANG KIRI BAWAH
@@ -2330,7 +2387,7 @@ class Scene:
             )
         )
 
-        # Pintu dan jendela bangunan stasiun
+        # Pintu dan jendela bangunan stasiun (Emissive)
         add(
             ColorCube(
                 app,
@@ -2339,22 +2396,22 @@ class Scene:
                 color=(0.24, 0.12, 0.05),
             )
         )
-        add(
+        add_night_light(add(
             ColorCube(
                 app,
                 pos=(12.1, 1.17, st_z + 6.08),
                 scale=(0.30, 0.375, 0.05),
-                color=(0.08, 0.13, 0.16),
+                color=(0.7, 0.9, 1.0),
             )
-        )
-        add(
+        ))
+        add_night_light(add(
             ColorCube(
                 app,
                 pos=(13.9, 1.17, st_z + 6.08),
                 scale=(0.30, 0.375, 0.05),
-                color=(0.08, 0.13, 0.16),
+                color=(0.7, 0.9, 1.0),
             )
-        )
+        ))
 
         # Papan nama stasiun
         add(
@@ -2505,21 +2562,21 @@ class Scene:
         )
 
         # Lampu depan lokomotif
-        add_train_part(
+        add_night_light(add_train_part(
             local_offset=(-0.65, 0.88, loco_center_z - 2.86),
-            scale=(0.13, 0.13, 0.04),
+            scale=(0.18, 0.18, 0.04),
             color=(1.00, 0.95, 0.65)
-        )
-        add_train_part(
+        ))
+        add_night_light(add_train_part(
             local_offset=(0.65, 0.88, loco_center_z - 2.86),
-            scale=(0.13, 0.13, 0.04),
+            scale=(0.18, 0.18, 0.04),
             color=(1.00, 0.95, 0.65)
-        )
-        add_train_part(
+        ))
+        add_night_light(add_train_part(
             local_offset=(0.0, 0.88, loco_center_z - 2.86),
-            scale=(0.13, 0.13, 0.04),
+            scale=(0.18, 0.18, 0.04),
             color=(1.00, 0.95, 0.65)
-        )
+        ))
 
         # Strip oranye dan biru di sisi lokomotif
         for side_x in [-1.60, 1.60]:
@@ -2649,6 +2706,9 @@ class Scene:
             color = (random.random(), random.random(), random.random())
             car = Vehicle(app, color=color)
             self.vehicles_pool.append(car)
+            # Register headlights to night_lights system
+            for headlight in car.headlights:
+                self.night_lights.append(headlight)
             add(car)
 
         self._spawn_vehicle(1) 
@@ -2697,6 +2757,31 @@ class Scene:
         GATE_X_R = -8.0 
         GATE_X_L = 8.0  
         
+        # --- LOGIKA AUDIO ---
+        # 1. Engine Chug (Hanya jika kereta sedang bergerak)
+        if self.state in ['TRAIN_CROSSING', 'OPENING', 'TRAIN_LEAVING']:
+            self.chug_timer += dt
+            if self.chug_timer > 0.4:
+                self.app.sounds['chug'].play()
+                self.chug_timer = 0.0
+        
+        # 2. Bell Crossing (Jika palang tidak IDLE)
+        if self.state != 'IDLE':
+            self.bell_timer += dt
+            if self.bell_timer > 0.6:
+                self.app.sounds['bell'].play()
+                self.bell_timer = 0.0
+        else:
+            self.bell_timer = 0.0
+            self.whistle_played = False # Reset whistle saat IDLE
+
+        # 3. Train Whistle (Semboyan 35)
+        # Mainkan saat kereta mendekati crossing (Z sekitar 30)
+        if self.state == 'TRAIN_CROSSING' and 25.0 < self.train_z < 35.0:
+            if not self.whistle_played:
+                self.app.sounds['whistle'].play()
+                self.whistle_played = True
+
         # --- LOGIKA NIGHT LIGHTS ---
         # Lampu mulai menyala senja (17:00) dan mati subuh (07:00)
         t = self.app.sim_time
